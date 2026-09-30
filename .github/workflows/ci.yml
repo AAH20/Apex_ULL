@@ -23,6 +23,7 @@ jobs:
   cpp:
     runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         component: [feed_handler, matching_engine, network/udp]
     steps:

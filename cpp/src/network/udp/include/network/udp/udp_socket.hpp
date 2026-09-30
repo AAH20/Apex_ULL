@@ -52,17 +52,17 @@ public:
     [[nodiscard]] bool valid() const noexcept { return fd_ >= 0; }
     [[nodiscard]] bool connected() const noexcept { return connected_; }
 
-    std::expected<void, std::error_code> create() noexcept;
-    std::expected<void, std::error_code> set_nonblocking() noexcept;
-    std::expected<void, std::error_code> set_reuseaddr(bool enable) noexcept;
-    std::expected<void, std::error_code> set_reuseport(bool enable) noexcept;
-    std::expected<void, std::error_code> set_send_buffer_size(int size) noexcept;
+    compat::expected<void, std::error_code> create() noexcept;
+    compat::expected<void, std::error_code> set_nonblocking() noexcept;
+    compat::expected<void, std::error_code> set_reuseaddr(bool enable) noexcept;
+    compat::expected<void, std::error_code> set_reuseport(bool enable) noexcept;
+    compat::expected<void, std::error_code> set_send_buffer_size(int size) noexcept;
 
-    std::expected<void, std::error_code> bind(const sockaddr_in& addr) noexcept;
-    std::expected<void, std::error_code> connect(const sockaddr_in& addr) noexcept;
+    compat::expected<void, std::error_code> bind(const sockaddr_in& addr) noexcept;
+    compat::expected<void, std::error_code> connect(const sockaddr_in& addr) noexcept;
 
-    std::expected<size_t, std::error_code> send(const void* data, size_t len) noexcept;
-    std::expected<size_t, std::error_code> send_to(const void* data, size_t len,
+    compat::expected<size_t, std::error_code> send(const void* data, size_t len) noexcept;
+    compat::expected<size_t, std::error_code> send_to(const void* data, size_t len,
                                                     const sockaddr_in& dst) noexcept;
 
     void close() noexcept;

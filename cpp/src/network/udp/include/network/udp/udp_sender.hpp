@@ -27,12 +27,12 @@ public:
     UdpSender(const UdpSender&) = delete;
     UdpSender& operator=(const UdpSender&) = delete;
 
-    std::expected<void, std::error_code> initialize() noexcept;
-    std::expected<void, std::error_code> connect(const sockaddr_in& addr) noexcept;
+    compat::expected<void, std::error_code> initialize() noexcept;
+    compat::expected<void, std::error_code> connect(const sockaddr_in& addr) noexcept;
 
-    std::expected<size_t, std::error_code> send(const void* data, size_t len) noexcept;
-    std::expected<size_t, std::error_code> send(std::span<const std::byte> data) noexcept;
-    std::expected<size_t, std::error_code> send_to(const void* data, size_t len,
+    compat::expected<size_t, std::error_code> send(const void* data, size_t len) noexcept;
+    compat::expected<size_t, std::error_code> send(std::span<const std::byte> data) noexcept;
+    compat::expected<size_t, std::error_code> send_to(const void* data, size_t len,
                                                     const sockaddr_in& dst) noexcept;
 
     [[nodiscard]] bool connected() const noexcept { return socket_.connected(); }

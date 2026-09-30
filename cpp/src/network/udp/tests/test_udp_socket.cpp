@@ -91,3 +91,20 @@ TEST(UdpSocketTest, MoveSemantics) {
     EXPECT_TRUE(sock2.valid());
     EXPECT_FALSE(sock1.valid());
 }
+
+TEST(UdpExpectedCompatibility, NontrivialValuesAndErrorAssignment) {
+    compat::expected<std::string,std::string> value(std::string("payload"));
+    auto copied=value;
+    ASSERT_TRUE(copied);
+    EXPECT_EQ(copied.value(),"payload");
+    value=compat::unexpected(std::string("failed"));
+    ASSERT_FALSE(value);
+    EXPECT_EQ(value.error(),"failed");
+    value=std::string("restored");
+    EXPECT_EQ(*value,"restored");
+    compat::expected<void,std::string> success;
+    ASSERT_TRUE(success);
+    success=compat::unexpected(std::string("failure"));
+    ASSERT_FALSE(success);
+    EXPECT_EQ(success.error(),"failure");
+}
