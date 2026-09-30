@@ -1,0 +1,9 @@
+{
+  "id": "apex.ull.spsc.roundtrip",
+  "version": "0.1.0",
+  "boundary": "CLOCK_MONOTONIC before push to after pop and pointer correctness check",
+  "queue": "single producer and consumer on one thread",
+  "capacity": 1024,
+  "batch_size": 1024,
+  "payload": "constant unsigned 42 pointer"
+}

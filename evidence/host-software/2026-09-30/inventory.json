@@ -1,0 +1,10 @@
+{
+  "os": "Darwin",
+  "os_version": "25.5.0",
+  "architecture": "arm64",
+  "cpu": "unknown (arm64)",
+  "logical_cpus": 8,
+  "nic": "not used",
+  "affinity": "not pinned",
+  "power_policy": "not controlled"
+}

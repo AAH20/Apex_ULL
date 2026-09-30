@@ -1,0 +1,173 @@
+{
+  "schema_version": "0.1.0",
+  "run_id": "apex-ull-host-20260930T131527904436Z",
+  "status": "valid",
+  "claim_kind": "measured",
+  "provenance": {
+    "repository_url": "https://github.com/AAH20/Apex_ULL",
+    "commit": "a9e4b6142cbc0e1abd5daa5c3a8f08ff95533887",
+    "dirty": false,
+    "config_sha256": "ac24f61fe6a45aeeb933c95f8c54a99fd6dfc1c5a8d90459a11a0a74ec8604b6",
+    "recorded_at": "2026-09-30T13:15:27.904729+00:00",
+    "sources": []
+  },
+  "workload": {
+    "id": "apex.ull.spsc.roundtrip",
+    "version": "0.1.0",
+    "kind": "open",
+    "spec_sha256": "696058ea033fcc5f067d27a027681b16ecad24a9a5863c08f4d3a796d0b993fd",
+    "input_sha256": "c4915068256db65d72027cf18036680fc5d021a7cd58ab3a95f50d966592706d",
+    "rights": "public_redistributable",
+    "semantics": "CLOCK_MONOTONIC before push to after pop and pointer correctness check",
+    "frame_integrity_policy": "not_applicable"
+  },
+  "platform": {
+    "inventory_artifact": "inventory",
+    "implementation_artifact": "build",
+    "transport_backend": "in_memory_spsc",
+    "backend_status": "simulated"
+  },
+  "evidence": {
+    "implementation": "software",
+    "environment": "cpu",
+    "validation": "none",
+    "validation_receipt": null
+  },
+  "measurement": {
+    "method": "software_clock",
+    "start_boundary": "before first SPSC push of batch",
+    "stop_boundary": "after last SPSC pop and pointer check of batch",
+    "clock_artifact": "clock",
+    "calibration_artifact": null,
+    "resolution_ns": 1000,
+    "uncertainty_artifact": null,
+    "warmup_policy": "exclude first 1000 batches",
+    "sampling_policy": "all measured iterations in chronological order; nearest-rank quantiles",
+    "sample_count": 10000
+  },
+  "traffic": {
+    "schedule_artifact": "schedule",
+    "offered_count": 10000,
+    "accepted_count": 10000,
+    "completed_count": 10000,
+    "rejected_count": 0,
+    "dropped_count": 0,
+    "duplicate_output_count": 0,
+    "wrong_output_count": 0,
+    "unresolved_count": 0
+  },
+  "metrics": [
+    {
+      "id": "spsc.batch.p50",
+      "value": 4000,
+      "unit": "ns",
+      "statistic": "p50",
+      "population": "completed batches of 1024 sequential in-memory SPSC round trips",
+      "direction": "lower"
+    },
+    {
+      "id": "spsc.batch.p99",
+      "value": 7000,
+      "unit": "ns",
+      "statistic": "p99",
+      "population": "completed batches of 1024 sequential in-memory SPSC round trips",
+      "direction": "lower"
+    },
+    {
+      "id": "spsc.batch.p99.9",
+      "value": 20000,
+      "unit": "ns",
+      "statistic": "p99.9",
+      "population": "completed batches of 1024 sequential in-memory SPSC round trips",
+      "direction": "lower"
+    },
+    {
+      "id": "spsc.batch.p99.99",
+      "value": 44000,
+      "unit": "ns",
+      "statistic": "p99.99",
+      "population": "completed batches of 1024 sequential in-memory SPSC round trips",
+      "direction": "lower"
+    },
+    {
+      "id": "spsc.batch.rate",
+      "value": 261560.99602427284,
+      "unit": "events/s",
+      "statistic": "rate",
+      "population": "completed batches of 1024 sequential in-memory SPSC round trips",
+      "direction": "higher"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "config",
+      "role": "configuration",
+      "location": "config.json",
+      "sha256": "ac24f61fe6a45aeeb933c95f8c54a99fd6dfc1c5a8d90459a11a0a74ec8604b6",
+      "visibility": "public"
+    },
+    {
+      "id": "workload",
+      "role": "configuration",
+      "location": "workload.json",
+      "sha256": "696058ea033fcc5f067d27a027681b16ecad24a9a5863c08f4d3a796d0b993fd",
+      "visibility": "public"
+    },
+    {
+      "id": "input",
+      "role": "configuration",
+      "location": "input.json",
+      "sha256": "c4915068256db65d72027cf18036680fc5d021a7cd58ab3a95f50d966592706d",
+      "visibility": "public"
+    },
+    {
+      "id": "inventory",
+      "role": "platform_inventory",
+      "location": "inventory.json",
+      "sha256": "ce69f3893baf268f3701db231308b5d052f44e5cc75d0b10faf7b87a0769039c",
+      "visibility": "public"
+    },
+    {
+      "id": "build",
+      "role": "implementation",
+      "location": "build.json",
+      "sha256": "9986b517ef035b4072dede70dea0d902be25e419ec7a0f78420c6e35b42cd814",
+      "visibility": "public"
+    },
+    {
+      "id": "clock",
+      "role": "configuration",
+      "location": "clock.json",
+      "sha256": "f3986691f4e5c57d3d24c5b0692ccb7b0f4d761aa480037f1d21edb8a6339c5c",
+      "visibility": "public"
+    },
+    {
+      "id": "schedule",
+      "role": "configuration",
+      "location": "schedule.json",
+      "sha256": "46be475421d2da4459d87ce61c0ecf010fac293ffbf5aa4ae3886b67f6f546e1",
+      "visibility": "public"
+    },
+    {
+      "id": "samples",
+      "role": "chronological_latency_samples_ns",
+      "location": "samples.json",
+      "sha256": "96c0e7a6f52bf16e5708cb54e5348d18ebf5557969e798f8ac6be4a150919db6",
+      "visibility": "public"
+    },
+    {
+      "id": "throughput",
+      "role": "throughput_accounting",
+      "location": "throughput.json",
+      "sha256": "656fed0108d63f000d6aa9ea2d5818117a525fa1409049d2f6d3af7caca416aa",
+      "visibility": "public"
+    }
+  ],
+  "limitations": [
+    "Host software-clock batch durations, not individual-operation, network or tick-to-trade latency.",
+    "Timer, loop and correctness-check overhead are included; CPU placement and power policy are uncontrolled.",
+    "Declared clock resolution is not calibrated uncertainty; finite samples do not establish a global latency bound.",
+    "Build recipe and binary digest are retained; binary replay requires rebuilding the identified source and toolchain.",
+    "No independent validation or official STAC execution."
+  ]
+}
