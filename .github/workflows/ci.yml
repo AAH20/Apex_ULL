@@ -44,7 +44,6 @@ jobs:
 
       - name: MyPy type check
         run: |
-          pip install types-all
           mypy kernels/ --ignore-missing-imports --no-strict-optional || true
 
   # ── Security Scan ──────────────────────────────────────────────
