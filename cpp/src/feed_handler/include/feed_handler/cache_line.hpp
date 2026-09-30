@@ -5,6 +5,9 @@
 #include <cstdint>
 #include <new>
 #include <utility>
+#if defined(__x86_64__) || defined(__i386__)
+#include <immintrin.h>
+#endif
 
 namespace feed_handler {
 
@@ -31,7 +34,6 @@ inline constexpr std::size_t kCacheLineSize = 64;
 
 /// Prefetch a cache line for read.
 #if defined(__x86_64__) || defined(__i386__)
-#include <immintrin.h>
 inline void prefetch_read(const void* ptr) noexcept { _mm_prefetch(static_cast<const char*>(ptr), _MM_HINT_T0); }
 #elif defined(__aarch64__)
 inline void prefetch_read(const void* ptr) noexcept { __builtin_prefetch(ptr, 0, 3); }
