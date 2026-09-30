@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Platform — Unified Architecture Deep Dive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --bg-surface: #0f1422;
+      --bg-surface-elevated: #161e31;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(6, 182, 212, 0.3);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --cyan-glow: #06b6d4;
+      --purple-glow: #a855f7;
+      --emerald-glow: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .ambient-bg {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.07) 0%, transparent 40%),
+        radial-gradient(circle at 85% 25%, rgba(168, 85, 247, 0.07) 0%, transparent 45%),
+        radial-gradient(circle at 50% 85%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+    }
+
+    .container {
+      position: relative; z-index: 1;
+      max-width: 1440px; margin: 0 auto;
+      padding: 32px 24px 80px 24px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 28px; margin-bottom: 32px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    .badge-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 9999px;
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+      border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.03);
+    }
+    .badge.cyan { border-color: rgba(6, 182, 212, 0.3); color: var(--cyan-glow); background: rgba(6, 182, 212, 0.06); }
+    .badge.purple { border-color: rgba(168, 85, 247, 0.3); color: var(--purple-glow); background: rgba(168, 85, 247, 0.06); }
+    .badge.emerald { border-color: rgba(16, 185, 129, 0.3); color: var(--emerald-glow); background: rgba(16, 185, 129, 0.06); }
+
+    .header-title-row { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 20px; }
+
+    h1 {
+      font-size: 32px; font-weight: 800; letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle { color: var(--text-muted); font-size: 15px; max-width: 960px; margin-top: 6px; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }
+
+    .stat-card {
+      background: var(--bg-surface); border: 1px solid var(--border-color);
+      border-radius: 12px; padding: 18px 20px;
+    }
+
+    .stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px; }
+    .stat-val { font-size: 26px; font-weight: 800; color: #fff; font-family: 'JetBrains Mono', monospace; }
+
+    .tab-nav { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 32px; border-bottom: 1px solid var(--border-color); }
+
+    .tab-btn {
+      background: transparent; border: none; color: var(--text-muted);
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      padding: 12px 20px; border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: all 0.2s ease; white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text-main); background: rgba(255, 255, 255, 0.04); }
+    .tab-btn.active { color: #ffffff; background: var(--bg-surface-elevated); border: 1px solid var(--border-accent); box-shadow: 0 4px 14px rgba(6, 182, 212, 0.12); }
+
+    .panel { display: none; animation: fadeIn 0.3s ease; }
+    .panel.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .glass-card {
+      background: var(--bg-surface); border: 1px solid var(--border-color);
+      border-radius: 14px; padding: 24px; margin-bottom: 24px;
+      backdrop-filter: blur(12px); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+    .glass-card:hover { border-color: rgba(255, 255, 255, 0.15); }
+
+    .card-title { font-size: 18px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+
+    .mermaid-box {
+      background: #090d16; border: 1px solid var(--border-color);
+      border-radius: 12px; padding: 28px 20px; overflow-x: auto;
+      text-align: center; margin: 16px 0;
+    }
+
+    .section-label {
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--cyan-glow); margin: 24px 0 10px;
+    }
+
+    .component-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin: 16px 0; }
+
+    .component-card {
+      background: var(--bg-surface-elevated); border: 1px solid var(--border-color);
+      border-radius: 10px; padding: 16px 18px; transition: border-color 0.2s;
+    }
+    .component-card:hover { border-color: var(--cyan-glow); }
+    .component-card .comp-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: var(--cyan-glow); margin-bottom: 4px; }
+    .component-card .comp-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text-muted); }
+    .tag.cyan { background: rgba(6,182,212,0.1); color: var(--cyan-glow); }
+    .tag.purple { background: rgba(168,85,247,0.1); color: var(--purple-glow); }
+    .tag.emerald { background: rgba(16,185,129,0.1); color: var(--emerald-glow); }
+
+    footer {
+      border-top: 1px solid var(--border-color); padding-top: 24px; margin-top: 60px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 16px; color: var(--text-dim); font-size: 13px;
+    }
+
+    @media (max-width: 768px) {
+      .container { padding: 20px 14px 60px 14px; }
+      h1 { font-size: 24px; }
+      .header-title-row { flex-direction: column; align-items: flex-start; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .tab-btn { padding: 10px 14px; font-size: 13px; }
+      .mermaid-box { padding: 16px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-bg"></div>
+  <div class="container">
+
+    <header>
+      <div class="badge-bar">
+        <span class="badge cyan">Apex Platform</span>
+        <span class="badge purple">Unified Architecture</span>
+        <span class="badge emerald">7 Layers · 40+ Components</span>
+      </div>
+      <div class="header-title-row">
+        <div>
+          <h1>Apex Platform — Unified Architecture</h1>
+          <p class="subtitle">Comprehensive deep-dive into the Apex Platform's seven-layer architecture, from the Apex_ULL low-latency foundation through ApexGraphSwarm orchestration, GRC_Claw governance, Data Center Commander, Apex Memory Context, Commercial Layer, and Integration APIs.</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Architecture Layers</div>
+        <div class="stat-val" style="color: var(--cyan-glow);">7</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">C++20 Components</div>
+        <div class="stat-val" style="color: var(--purple-glow);">18</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Rust Components</div>
+        <div class="stat-val" style="color: var(--emerald-glow);">18</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Python Kernels</div>
+        <div class="stat-val" style="color: var(--cyan-glow);">4</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">API Protocols</div>
+        <div class="stat-val" style="color: var(--purple-glow);">5</div>
+      </div>
+    </div>
+
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('tab-overview')">📐 Platform Overview</button>
+      <button class="tab-btn" onclick="switchTab('tab-ull')">⚡ Apex_ULL Deep Dive</button>
+      <button class="tab-btn" onclick="switchTab('tab-memory')">🧠 Memory & Context</button>
+      <button class="tab-btn" onclick="switchTab('tab-apis')">🔌 Integration & APIs</button>
+    </div>
+
+    <!-- TAB 1: Platform Overview -->
+    <div id="tab-overview" class="panel active">
+      <div class="glass-card">
+        <div class="card-title"><span>📐 Apex Platform — Seven-Layer Unified Architecture</span></div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          The Apex Platform is structured as seven cohesive layers, each building upon the lower layer's capabilities. From the nanosecond-precision Apex_ULL foundation to the developer-facing Integration APIs, every layer is designed for composability, observability, and sovereign operation.
+        </p>
+
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    L7["Layer 7: Integration APIs<br/>REST · gRPC · WebSocket · GraphQL · MCP"]
+    L6["Layer 6: Commercial Layer<br/>Billing · Licensing · Marketplace · Analytics"]
+    L5["Layer 5: Apex Memory Context<br/>Cognee Graph · Hindsight · Nerve · Laya"]
+    L4["Layer 4: Data Center Commander<br/>K8s · Multi-Cloud · Edge · GPU Orchestration"]
+    L3["Layer 3: GRC_Claw<br/>Compliance · Audit · Policy · Evidence Vault"]
+    L2["Layer 2: ApexGraphSwarm<br/>Agent Orchestration · NP-Hard Kernels · Telepathy"]
+    L1["Layer 1: Apex_ULL<br/>C++20 · Rust · Python · Sub-μs Latency"]
+
+    L1 -->|"Foundation"| L2
+    L2 -->|"Orchestration"| L3
+    L3 -->|"Governance"| L4
+    L4 -->|"Infrastructure"| L5
+    L5 -->|"Intelligence"| L6
+    L6 -->|"Monetization"| L7
+
+    subgraph CoreStack["Core Technology Stack"]
+        ULL["Apex_ULL<br/>(Ultra Low Latency)"]
+        Swarm["ApexGraphSwarm<br/>(Agent Swarm OS)"]
+        GRC["GRC_Claw<br/>(Governance Engine)"]
+    end
+
+    L1 --- ULL
+    L2 --- Swarm
+    L3 --- GRC
+          </pre>
+        </div>
+
+        <div class="section-label">Layer Details</div>
+        <div class="component-grid">
+          <div class="component-card">
+            <div class="comp-name">Layer 1 — Apex_ULL</div>
+            <div class="comp-desc">Ultra-low-latency foundation in C++20, Rust, and Python. Feed handling, matching engine, signal processing, risk management, and sub-microsecond networking via DPDK/RDMA.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag purple">Rust</span><span class="tag emerald">Python</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">Layer 2 — ApexGraphSwarm</div>
+            <div class="comp-desc">Deterministic agent orchestration operating system solving 10 apex NP-Hard problems in graph engineering and swarm coordination with zero-dependency Python kernels.</div>
+            <div class="tag-row"><span class="tag cyan">Graph</span><span class="tag purple">Swarm</span><span class="tag emerald">NP-Hard</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">Layer 3 — GRC_Claw</div>
+            <div class="comp-desc">Autonomous governance, risk, and compliance engine. Continuous multi-cloud evidence harvesting, 867 compliance controls, and cryptographic audit sealing.</div>
+            <div class="tag-row"><span class="tag cyan">GRC</span><span class="tag purple">Compliance</span><span class="tag emerald">Audit</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">Layer 4 — Data Center Commander</div>
+            <div class="comp-desc">Multi-cloud and edge infrastructure orchestration. Kubernetes-native, GPU cloud federation, and autonomous SRE with incident response.</div>
+            <div class="tag-row"><span class="tag cyan">K8s</span><span class="tag purple">Multi-Cloud</span><span class="tag emerald">Edge</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">Layer 5 — Apex Memory Context</div>
+            <div class="comp-desc">Cognee graph memory, Hindsight cross-session learning, Nerve supervision, and Laya fast decisions. Persistent intelligence across agent lifecycles.</div>
+            <div class="tag-row"><span class="tag cyan">Cognee</span><span class="tag purple">Nerve</span><span class="tag emerald">Laya</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">Layer 6 — Commercial Layer</div>
+            <div class="comp-desc">Billing, licensing, marketplace, and analytics. Transparent CLI-based pricing from $349/month to enterprise vCISO retainers.</div>
+            <div class="tag-row"><span class="tag cyan">Billing</span><span class="tag purple">Marketplace</span><span class="tag emerald">Analytics</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">Layer 7 — Integration APIs</div>
+            <div class="comp-desc">REST, gRPC, WebSocket, GraphQL, and MCP protocols. Universal API gateway with automatic fallback across frontier models.</div>
+            <div class="tag-row"><span class="tag cyan">REST</span><span class="tag purple">gRPC</span><span class="tag emerald">MCP</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title"><span>🔄 Data Flow Across Layers</span></div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          How market data, agent tasks, and governance signals flow through the platform from ingestion to API response.
+        </p>
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart LR
+    MD["Market Data<br/>(FIX/SBE/ITCH)"]
+    FH["feed_handler<br/>(Apex_ULL)"]
+    ME["matching_engine<br/>(Apex_ULL)"]
+    SE["signal_engine<br/>(Apex_ULL)"]
+    AG["ApexGraphSwarm<br/>(Agent Orchestration)"]
+    GC["GRC_Claw<br/>(Compliance Check)"]
+    DC["Data Center Commander<br/>(K8s Dispatch)"]
+    MC["Apex Memory Context<br/>(Cognee + Nerve)"]
+    API["Integration APIs<br/>(REST/gRPC/MCP)"]
+
+    MD -->|"sub-μs"| FH
+    FH -->|"normalized"| ME
+    ME -->|"signals"| SE
+    SE -->|"tasks"| AG
+    AG -->|"audit"| GC
+    GC -->|"schedule"| DC
+    DC -->|"context"| MC
+    MC -->|"response"| API
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Apex_ULL Deep Dive -->
+    <div id="tab-ull" class="panel">
+      <div class="glass-card">
+        <div class="card-title"><span>⚡ Apex_ULL — Ultra Low Latency Foundation</span></div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          Apex_ULL is the bedrock of the Apex Platform, implemented in C++20, Rust, and Python. It provides sub-microsecond feed handling, deterministic matching, signal processing, and risk management with kernel-bypass networking.
+        </p>
+
+        <div class="section-label">C++20 Component Architecture</div>
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    subgraph NetworkIn["Network Ingestion"]
+        DPDK["dpdk<br/>(Kernel Bypass)"]
+        RDMA["rdma<br/>(Zero-Copy)"]
+        TCP["tcp_udp<br/>(Fallback)"]
+    end
+
+    subgraph Protocols["Protocol Decoders"]
+        FIX["fix<br/>(FIX 4.4/5.0)"]
+        SBE["sbe<br/>(Simple Binary)"]
+        ITCH["itch<br/>(NASDAQ)"]
+        PILLAR["pillar<br/>(NYSE)"]
+    end
+
+    subgraph Core["Core Engine"]
+        FH2["feed_handler<br/>(Normalization)"]
+        ME2["matching_engine<br/>(Deterministic)"]
+        OB["order_book<br/>(Price-Time)"]
+        SE2["signal_engine<br/>(Alpha Gen)"]
+    end
+
+    subgraph Risk["Risk & Compliance"]
+        RE["risk_engine<br/>(Pre-Trade)"]
+        OR["order_router<br/>(Smart Order)"]
+        COMP["compliance<br/>(RegCheck)"]
+    end
+
+    subgraph Infra["Infrastructure"]
+        RB["ring_buffer<br/>(SPSC/MPMC)"]
+        TH["threading<br/>(Core Pin)"]
+        LOG["logging<br/>(Lock-Free)"]
+        MET["metrics<br/>(Prometheus)"]
+    end
+
+    DPDK --> FH2
+    RDMA --> FH2
+    TCP --> FH2
+    FIX --> FH2
+    SBE --> FH2
+    ITCH --> FH2
+    PILLAR --> FH2
+    FH2 --> ME2
+    ME2 --> OB
+    OB --> SE2
+    SE2 --> RE
+    RE --> OR
+    OR --> COMP
+    RB --- FH2
+    TH --- ME2
+    LOG --- RE
+    MET --- OR
+          </pre>
+        </div>
+
+        <div class="section-label">C++20 Components</div>
+        <div class="component-grid">
+          <div class="component-card">
+            <div class="comp-name">feed_handler</div>
+            <div class="comp-desc">Normalizes multi-protocol market data into a unified internal format. Lock-free SPSC ring buffer ingestion with sub-μs latency.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">Lock-Free</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">matching_engine</div>
+            <div class="comp-desc">Deterministic price-time priority matching with zero-allocation hot path. Supports limit, market, and iceberg order types.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">Zero-Alloc</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">order_book</div>
+            <div class="comp-desc">Lock-free order book with atomic price level updates. Maintains full depth for market data distribution.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">Atomic</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">signal_engine</div>
+            <div class="comp-desc">Alpha signal generation from order flow, trade prints, and cross-venue arbitrage detection. Sub-μs signal latency.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">Alpha</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">risk_engine</div>
+            <div class="comp-desc">Pre-trade risk checks: position limits, credit limits, fat-finger checks, and kill switch. Deterministic sub-μs evaluation.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">Pre-Trade</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">order_router</div>
+            <div class="comp-desc">Smart order routing across multiple venues. Latency-aware routing with venue health monitoring.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">Smart Routing</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">market_data</div>
+            <div class="comp-desc">Real-time market data distribution to internal consumers and external subscribers via multicast.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">Multicast</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">compliance</div>
+            <div class="comp-desc">Regulatory compliance checks: Reg NMS, MiFID II, and market abuse detection with audit trail.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">RegCheck</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">clock_sync</div>
+            <div class="comp-desc">IEEE 1588 PTP hardware timestamping with sub-nanosecond accuracy for cross-venue synchronization.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">PTP</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">memory</div>
+            <div class="comp-desc">Custom arena allocator with NUMA-aware placement. Zero heap allocations on the hot path.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">NUMA</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">ring_buffer</div>
+            <div class="comp-desc">SPSC and MPMC lock-free ring buffers for inter-thread communication with cache-line padding.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">SPSC/MPMC</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">threading</div>
+            <div class="comp-desc">Core-pinned thread affinity with work-stealing fallback. Isolated cores for critical path threads.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">Core Pin</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">logging</div>
+            <div class="comp-desc">Lock-free async logging with compile-time severity filtering. Zero-cost when disabled.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">Async</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">metrics</div>
+            <div class="comp-desc">Prometheus-compatible metrics export with nanosecond-resolution histograms.</div>
+            <div class="tag-row"><span class="tag cyan">C++20</span><span class="tag">Prometheus</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title"><span>🦀 Rust Component Architecture</span></div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          The Rust implementation mirrors the C++20 architecture with memory safety guarantees, fearless concurrency, and zero-cost abstractions. Ideal for the safety-critical compliance and risk components.
+        </p>
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    subgraph RustNet["Rust Network Layer"]
+        RDPDK["dpdk-rs<br/>(Kernel Bypass)"]
+        RRDMA["rdma-rs<br/>(Zero-Copy)"]
+        RTCP["tokio-tcp<br/>(Async I/O)"]
+    end
+
+    subgraph RustProto["Rust Protocol Decoders"]
+        RFIX["fix-rs<br/>(FIX Engine)"]
+        RSBE["sbe-rs<br/>(Binary Decode)"]
+        RITCH["itch-rs<br/>(NASDAQ)"]
+        RPILLAR["pillar-rs<br/>(NYSE)"]
+    end
+
+    subgraph RustCore["Rust Core Engine"]
+        RFH["feed_handler<br/>(Normalization)"]
+        RME["matching_engine<br/>(Deterministic)"]
+        ROB["order_book<br/>(Price-Time)"]
+        RSE["signal_engine<br/>(Alpha Gen)"]
+    end
+
+    subgraph RustRisk["Rust Risk & Compliance"]
+        RRE["risk_engine<br/>(Pre-Trade)"]
+        ROR["order_router<br/>(Smart Order)"]
+        RCOMP["compliance<br/>(RegCheck)"]
+    end
+
+    subgraph RustInfra["Rust Infrastructure"]
+        RRB["ring_buffer<br/>(Crossbeam)"]
+        RTH["threading<br/>(Tokio)"]
+        RLOG["tracing<br/>(Structured)"]
+        RMET["metrics<br/>(Prometheus)"]
+    end
+
+    RDPDK --> RFH
+    RRDMA --> RFH
+    RTCP --> RFH
+    RFIX --> RFH
+    RSBE --> RFH
+    RITCH --> RFH
+    RPILLAR --> RFH
+    RFH --> RME
+    RME --> ROB
+    ROB --> RSE
+    RSE --> RRE
+    RRE --> ROR
+    ROR --> RCOMP
+    RRB --- RFH
+    RTH --- RME
+    RLOG --- RRE
+    RMET --- ROR
+          </pre>
+        </div>
+
+        <div class="section-label">Rust Components</div>
+        <div class="component-grid">
+          <div class="component-card">
+            <div class="comp-name">feed_handler (Rust)</div>
+            <div class="comp-desc">Async feed handler using tokio for I/O multiplexing. Zero-copy parsing with nom combinators.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">Tokio</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">matching_engine (Rust)</div>
+            <div class="comp-desc">Deterministic matching with Rust's type system preventing data races. BTreeMap-based price levels.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">BTreeMap</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">order_book (Rust)</div>
+            <div class="comp-desc">Arc-based shared order book with read-copy-update for lock-free reads.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">RCU</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">signal_engine (Rust)</div>
+            <div class="comp-desc">Signal generation with ndarray for vectorized computations. SIMD-optimized alpha calculations.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">SIMD</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">risk_engine (Rust)</div>
+            <div class="comp-desc">Memory-safe risk checks with compile-time guarantees. No null pointers, no data races.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">Memory Safe</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">order_router (Rust)</div>
+            <div class="comp-desc">Async order routing with tokio::select for concurrent venue communication.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">Async</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">compliance (Rust)</div>
+            <div class="comp-desc">Regulatory compliance with exhaustive pattern matching. No unhandled edge cases.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">Exhaustive</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">ring_buffer (Rust)</div>
+            <div class="comp-desc">Crossbeam-based MPMC ring buffer with bounded and unbounded variants.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">Crossbeam</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">threading (Rust)</div>
+            <div class="comp-desc">Tokio runtime with work-stealing scheduler. Pin-based core affinity.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">Tokio</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">logging (Rust)</div>
+            <div class="comp-desc">tracing crate with structured, async-aware logging. Compile-time level filtering.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">tracing</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">metrics (Rust)</div>
+            <div class="comp-desc">prometheus crate with custom registries and nanosecond histograms.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">Prometheus</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">clock_sync (Rust)</div>
+            <div class="comp-desc">PTP hardware timestamping with clock discipline algorithm.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">PTP</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">memory (Rust)</div>
+            <div class="comp-desc">Rust ownership model eliminates use-after-free. Arena allocator for hot path.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">Ownership</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">network (Rust)</div>
+            <div class="comp-desc">dpdk-rs, rdma-rs, and tokio-tcp for all network I/O patterns.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">DPDK/RDMA</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">protocols (Rust)</div>
+            <div class="comp-desc">fix-rs, sbe-rs, itch-rs, pillar-rs for zero-copy protocol decoding.</div>
+            <div class="tag-row"><span class="tag purple">Rust</span><span class="tag">Zero-Copy</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title"><span>🐍 Python Kernel Architecture</span></div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          Python kernels provide the scheduling, partitioning, routing, and evaluation intelligence for ApexGraphSwarm. Zero-dependency deterministic solvers for NP-Hard problems.
+        </p>
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    subgraph Kernels["Python Kernels"]
+        SCHED["scheduling<br/>(DAG Dispatch)"]
+        PART["partitioning<br/>(Graph Split)"]
+        ROUT["routing<br/>(Submodular)"]
+        EVAL["evaluation<br/>(Benchmark)"]
+    end
+
+    subgraph SwarmOps["Swarm Operations"]
+        ORCH["orchestrator<br/>(Task Graph)"]
+        EXEC["executor<br/>(Agent Pool)"]
+        MON["monitor<br/>(Telemetry)"]
+        REC["recovery<br/>(Self-Heal)"]
+    end
+
+    subgraph DataFlow["Data Flow"]
+        ING["ingest<br/>(Multi-Source)"]
+        NORM["normalize<br/>(Canonical)"]
+        ENRICH["enrich<br/>(Context)"]
+        EMIT["emit<br/>(Results)"]
+    end
+
+    SCHED --> ORCH
+    PART --> ORCH
+    ROUT --> EXEC
+    EVAL --> MON
+    ORCH --> EXEC
+    EXEC --> MON
+    MON --> REC
+    REC --> ORCH
+    ING --> NORM
+    NORM --> ENRICH
+    ENRICH --> SCHED
+    ROUT --> EMIT
+    EVAL --> EMIT
+          </pre>
+        </div>
+
+        <div class="section-label">Python Kernel Components</div>
+        <div class="component-grid">
+          <div class="component-card">
+            <div class="comp-name">scheduling</div>
+            <div class="comp-desc">Deterministic DAG-based task scheduling for agent swarms. Solves disjunctive tool scheduling and temporal panic detection.</div>
+            <div class="tag-row"><span class="tag emerald">Python</span><span class="tag">DAG</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">partitioning</div>
+            <div class="comp-desc">Graph partitioning for distributed agent execution. Spectral clustering and community detection for optimal task distribution.</div>
+            <div class="tag-row"><span class="tag emerald">Python</span><span class="tag">Spectral</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">routing</div>
+            <div class="comp-desc">Submodular attention routing for agent-to-agent communication. Optimal tool selection and Kemeny consensus.</div>
+            <div class="tag-row"><span class="tag emerald">Python</span><span class="tag">Submodular</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">evaluation</div>
+            <div class="comp-desc">Multi-dimensional benchmarking: accuracy, cost, latency, safety. Continuous conformance and invariant checking.</div>
+            <div class="tag-row"><span class="tag emerald">Python</span><span class="tag">Benchmark</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Memory & Context -->
+    <div id="tab-memory" class="panel">
+      <div class="glass-card">
+        <div class="card-title"><span>🧠 Apex Memory Context — Persistent Intelligence</span></div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          The Apex Memory Context layer provides persistent, evolving intelligence across agent lifecycles. Cognee graph memory, Hindsight cross-session learning, Nerve supervision, and Laya fast decisions work together to create a self-improving system.
+        </p>
+
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    subgraph MemoryCore["Memory Core"]
+        COG["cognee<br/>(Graph Memory)"]
+        HIN["hindsight<br/>(Cross-Session)"]
+        NER["nerve<br/>(Supervision)"]
+        LAY["laya<br/>(Fast Decisions)"]
+    end
+
+    subgraph Operations["Memory Operations"]
+        GC["memory_gc<br/>(Garbage Collect)"]
+        PRI["prioritization<br/>(Relevance)"]
+        PER["personalization<br/>(User Model)"]
+        CON["consolidation<br/>(Sleep)"]
+    end
+
+    subgraph Interfaces["Context Interfaces"]
+        APEX["Apex_ULL<br/>(Market Context)"]
+        SWARM["ApexGraphSwarm<br/>(Agent Context)"]
+        GRC["GRC_Claw<br/>(Compliance Context)"]
+        EXT["External<br/>(User/API)"]
+    end
+
+    COG -->|"stores"| HIN
+    HIN -->|"learns"| NER
+    NER -->|"supervises"| LAY
+    LAY -->|"decides"| COG
+    GC -->|"cleans"| COG
+    PRI -->|"ranks"| HIN
+    PER -->|"adapts"| NER
+    CON -->|"consolidates"| COG
+    APEX -->|"feeds"| COG
+    SWARM -->|"feeds"| HIN
+    GRC -->|"feeds"| NER
+    EXT -->|"feeds"| LAY
+          </pre>
+        </div>
+
+        <div class="section-label">Memory Components</div>
+        <div class="component-grid">
+          <div class="component-card">
+            <div class="comp-name">cognee</div>
+            <div class="comp-desc">Graph-based memory engine storing entities, relationships, and temporal edges. Enables complex multi-hop reasoning across agent sessions.</div>
+            <div class="tag-row"><span class="tag cyan">Graph</span><span class="tag">Memory</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">hindsight</div>
+            <div class="comp-desc">Cross-session learning engine. Extracts patterns from historical agent behavior to improve future decision-making.</div>
+            <div class="tag-row"><span class="tag purple">Learning</span><span class="tag">Cross-Session</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">nerve</div>
+            <div class="comp-desc">Supervision and control layer. Monitors agent health, enforces safety bounds, and emits decision-significant events.</div>
+            <div class="tag-row"><span class="tag emerald">Supervision</span><span class="tag">Safety</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">laya</div>
+            <div class="comp-desc">Fast decision engine for time-critical choices. Bounded candidate ranking with deterministic tie-breaking.</div>
+            <div class="tag-row"><span class="tag cyan">Fast</span><span class="tag">Decisions</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">memory_gc</div>
+            <div class="comp-desc">Garbage collection for stale memory entries. Spectral decay and relevance scoring prevent memory bloat.</div>
+            <div class="tag-row"><span class="tag purple">GC</span><span class="tag">Decay</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">prioritization</div>
+            <div class="comp-desc">Relevance-based memory prioritization. Submodular selection ensures diverse, high-value memory retention.</div>
+            <div class="tag-row"><span class="tag emerald">Ranking</span><span class="tag">Relevance</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">personalization</div>
+            <div class="comp-desc">User model adaptation. Learns individual preferences and adjusts agent behavior accordingly.</div>
+            <div class="tag-row"><span class="tag cyan">Personalization</span><span class="tag">Adaptation</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">consolidation</div>
+            <div class="comp-desc">Sleep-time memory consolidation. Merges redundant entries, strengthens important connections, and prunes weak ones.</div>
+            <div class="tag-row"><span class="tag purple">Consolidation</span><span class="tag">Sleep</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title"><span>🔄 Memory Lifecycle</span></div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          How memory flows through ingestion, consolidation, prioritization, and eventual garbage collection.
+        </p>
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart LR
+    ING["Ingestion<br/>(Raw Events)"]
+    PAR["Parsing<br/>(Entity Extract)"]
+    STORE["Storage<br/>(Graph Write)"]
+    CONS["Consolidation<br/>(Merge/Prune)"]
+    RANK["Ranking<br/>(Relevance Score)"]
+    RET["Retrieval<br/>(Multi-Hop)"]
+    GC["GC<br/>(Spectral Decay)"]
+    EVOLVE["Evolution<br/>(Pattern Learn)"]
+
+    ING --> PAR
+    PAR --> STORE
+    STORE --> CONS
+    CONS --> RANK
+    RANK --> RET
+    RET --> EVOLVE
+    EVOLVE -->|"feeds back"| STORE
+    RANK -->|"stale entries"| GC
+    GC -->|"cleanup"| STORE
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Integration & APIs -->
+    <div id="tab-apis" class="panel">
+      <div class="glass-card">
+        <div class="card-title"><span>🔌 Integration & APIs — Universal Connectivity</span></div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          The Integration API layer exposes the full Apex Platform capability through five protocols: REST, gRPC, WebSocket, GraphQL, and MCP. Each protocol is optimized for its use case while sharing a common authentication and rate-limiting layer.
+        </p>
+
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    subgraph Protocols["API Protocols"]
+        REST["REST<br/>(HTTP/JSON)"]
+        GRPC["gRPC<br/>(HTTP/2 Proto)"]
+        WS["WebSocket<br/>(Real-Time)"]
+        GQL["GraphQL<br/>(Flexible Query)"]
+        MCP["MCP<br/>(Model Context)"]
+    end
+
+    subgraph Gateway["API Gateway"]
+        AUTH["Authentication<br/>(OAuth2/JWT)"]
+        RATE["Rate Limiting<br/>(Token Bucket)"]
+        ROUTER["Router<br/>(Path-Based)"]
+        LB["Load Balancer<br/>(Round Robin)"]
+    end
+
+    subgraph Backend["Backend Services"]
+        ULL_SVC["Apex_ULL<br/>(Market Data)"]
+        SWARM_SVC["ApexGraphSwarm<br/>(Agent Ops)"]
+        GRC_SVC["GRC_Claw<br/>(Compliance)"]
+        MEM_SVC["Memory Context<br/>(Intelligence)"]
+        COMM_SVC["Commercial<br/>(Billing)"]
+    end
+
+    REST --> AUTH
+    GRPC --> AUTH
+    WS --> AUTH
+    GQL --> AUTH
+    MCP --> AUTH
+    AUTH --> RATE
+    RATE --> ROUTER
+    ROUTER --> LB
+    LB --> ULL_SVC
+    LB --> SWARM_SVC
+    LB --> GRC_SVC
+    LB --> MEM_SVC
+    LB --> COMM_SVC
+          </pre>
+        </div>
+
+        <div class="section-label">Protocol Details</div>
+        <div class="component-grid">
+          <div class="component-card">
+            <div class="comp-name">REST</div>
+            <div class="comp-desc">HTTP/JSON API for CRUD operations, market data queries, and agent task management. OpenAPI 3.1 specification with auto-generated SDKs.</div>
+            <div class="tag-row"><span class="tag cyan">REST</span><span class="tag">HTTP/JSON</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">gRPC</div>
+            <div class="comp-desc">High-performance RPC with Protocol Buffers. Bidirectional streaming for real-time market data and agent telemetry.</div>
+            <div class="tag-row"><span class="tag purple">gRPC</span><span class="tag">HTTP/2</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">WebSocket</div>
+            <div class="comp-desc">Full-duplex real-time communication for live market data streams, agent status updates, and collaborative editing.</div>
+            <div class="tag-row"><span class="tag emerald">WebSocket</span><span class="tag">Real-Time</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">GraphQL</div>
+            <div class="comp-desc">Flexible query language for complex, nested data requirements. Single endpoint with strongly-typed schema.</div>
+            <div class="tag-row"><span class="tag cyan">GraphQL</span><span class="tag">Flexible</span></div>
+          </div>
+          <div class="component-card">
+            <div class="comp-name">MCP</div>
+            <div class="comp-desc">Model Context Protocol for AI agent integration. Exposes platform tools and context to external AI systems.</div>
+            <div class="tag-row"><span class="tag purple">MCP</span><span class="tag">AI Agents</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title"><span>🔐 Authentication & Security Flow</span></div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          All API requests pass through a unified authentication and authorization layer before reaching backend services.
+        </p>
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    REQ["API Request"]
+    TLS["TLS 1.3<br/>(Termination)"]
+    AUTH2["OAuth2/JWT<br/>(Identity)"]
+    RBAC["RBAC<br/>(Authorization)"]
+    RATE2["Rate Limit<br/>(Token Bucket)"]
+    AUDIT["Audit Log<br/>(Immutable)"]
+    SVC["Backend Service"]
+    RESP["Response"]
+
+    REQ --> TLS
+    TLS --> AUTH2
+    AUTH2 -->|"valid"| RBAC
+    AUTH2 -->|"invalid"| REJECT["401 Unauthorized"]
+    RBAC -->|"allowed"| RATE2
+    RBAC -->|"denied"| FORBID["403 Forbidden"]
+    RATE2 -->|"under limit"| AUDIT
+    RATE2 -->|"over limit"| THROTTLE["429 Too Many"]
+    AUDIT --> SVC
+    SVC --> RESP
+          </pre>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-title"><span>📡 Real-Time Data Streaming Architecture</span></div>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          WebSocket and gRPC streaming architecture for real-time market data, agent telemetry, and compliance events.
+        </p>
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart LR
+    subgraph Sources["Data Sources"]
+        MKT["Market Data<br/>(Apex_ULL)"]
+        AGT["Agent Telemetry<br/>(ApexGraphSwarm)"]
+        CMP["Compliance Events<br/>(GRC_Claw)"]
+    end
+
+    subgraph Stream["Streaming Layer"]
+        PUB["Pub/Sub<br/>(NATS)"]
+        FAN["Fan-Out<br/>(WebSocket)"]
+        BSTR["Bi-Directional<br/>(gRPC Stream)"]
+    end
+
+    subgraph Clients["Clients"]
+        WEB["Web Dashboard"]
+        IDE["IDE Plugin"]
+        EXT["External API"]
+    end
+
+    MKT --> PUB
+    AGT --> PUB
+    CMP --> PUB
+    PUB --> FAN
+    PUB --> BSTR
+    FAN --> WEB
+    FAN --> IDE
+    BSTR --> EXT
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div><strong>Apex Platform</strong> &copy; 2026 Apex Growth Systems LLC. All Rights Reserved.</div>
+      <div>Unified Architecture · 7 Layers · 40+ Components · 5 API Protocols</div>
+    </footer>
+
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      securityLevel: 'loose',
+      themeVariables: {
+        darkMode: true,
+        background: '#090d16',
+        primaryColor: '#1e293b',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#06b6d4',
+        lineColor: '#38bdf8',
+        secondaryColor: '#0f172a',
+        tertiaryColor: '#1e1b4b'
+      }
+    });
+
+    async function renderMermaidInPanel(panelId) {
+      const panel = document.getElementById(panelId);
+      if (!panel) return;
+      const mermaidNodes = panel.querySelectorAll('.mermaid:not([data-processed="true"])');
+      if (mermaidNodes.length === 0) return;
+      try {
+        await mermaid.run({ nodes: Array.from(mermaidNodes) });
+      } catch (err) {
+        console.error('Mermaid render error in ' + panelId + ':', err);
+      }
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+
+      const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick')?.includes(tabId));
+      if (targetBtn) {
+        targetBtn.classList.add('active');
+      } else if (window.event && window.event.currentTarget) {
+        window.event.currentTarget.classList.add('active');
+      }
+
+      const targetPanel = document.getElementById(tabId);
+      if (targetPanel) {
+        targetPanel.classList.add('active');
+        requestAnimationFrame(() => {
+          renderMermaidInPanel(tabId);
+        });
+      }
+    }
+
+    // Initial render
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        renderMermaidInPanel('tab-overview');
+      });
+    } else {
+      renderMermaidInPanel('tab-overview');
+    }
+  </script>
+</body>
+</html>

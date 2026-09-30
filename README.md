@@ -743,9 +743,10 @@ Open these in any browser for interactive dark-themed visualizations:
 
 | Diagram | File | Description |
 |---------|------|-------------|
-| **Ecosystem Overview** | [docs/mermaid/ecosystem-overview.html](docs/mermaid/ecosystem-overview.html) | Full Apex ecosystem — 9 clusters, 120+ projects |
-| **Commercial Layer** | [docs/mermaid/commercial-layer.html](docs/mermaid/commercial-layer.html) | 4-tier offering, GTM motion, revenue model |
-| **Apex Platform** | [docs/mermaid/apex-platform.html](docs/mermaid/apex-platform.html) | Unified platform architecture — 7 layers |
+| **Apex Ecosystem** | [docs/mermaid/apex-ecosystem.html](docs/mermaid/apex-ecosystem.html) | Full ecosystem — 4 tabs: Platform Architecture, Ecosystem Map (120+ projects), Commercial Offering, FinTech C2 Matrix |
+| **Apex Platform** | [docs/mermaid/apex-platform-detailed.html](docs/mermaid/apex-platform-detailed.html) | Platform deep dive — 4 tabs: Platform Overview, Apex_ULL Deep Dive (C++20/Rust/Python), Memory & Context, Integration & APIs |
+
+**Design:** Dark theme (#07090e), limited color palette (cyan primary, subtle purple/emerald secondary), Plus Jakarta Sans + JetBrains Mono, glass cards, tab navigation, fully responsive, search/filter for projects.
 
 ### FinTech C2 Matrix
 

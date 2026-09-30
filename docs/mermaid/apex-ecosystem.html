@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Ecosystem — Unified Architecture & Commercial Cockpit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --bg-surface: #0f1422;
+      --bg-surface-elevated: #161e31;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(6, 182, 212, 0.3);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --cyan: #06b6d4;
+      --purple: #a855f7;
+      --emerald: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .ambient-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 85% 25%, rgba(168, 85, 247, 0.05) 0%, transparent 45%),
+        radial-gradient(circle at 50% 85%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 32px 24px 80px 24px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 28px;
+      margin-bottom: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .badge-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .badge.cyan { border-color: rgba(6, 182, 212, 0.3); color: var(--cyan); background: rgba(6, 182, 212, 0.06); }
+    .badge.purple { border-color: rgba(168, 85, 247, 0.3); color: var(--purple); background: rgba(168, 85, 247, 0.06); }
+    .badge.emerald { border-color: rgba(16, 185, 129, 0.3); color: var(--emerald); background: rgba(16, 185, 129, 0.06); }
+
+    .header-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 960px;
+      margin-top: 6px;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-val {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tab-btn.active {
+      color: #ffffff;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-accent);
+      box-shadow: 0 4px 14px rgba(6, 182, 212, 0.12);
+    }
+
+    .panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .panel.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .glass-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .glass-card:hover { border-color: rgba(255, 255, 255, 0.15); }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .mermaid-box {
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 28px 20px;
+      overflow-x: auto;
+      text-align: center;
+      margin: 16px 0;
+    }
+
+    .mermaid-box .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .mermaid-box .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .explorer-controls {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+      align-items: center;
+    }
+
+    .search-input {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      padding: 12px 18px;
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 14px;
+      font-family: inherit;
+      min-width: 280px;
+      flex: 1;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus { border-color: var(--cyan); }
+
+    .filter-chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .filter-chip {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-chip:hover, .filter-chip.active {
+      color: #fff;
+      border-color: var(--cyan);
+      background: rgba(6, 182, 212, 0.1);
+    }
+
+    .repo-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .repo-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--cyan);
+    }
+
+    .repo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .repo-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      text-decoration: none;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .repo-name:hover { color: var(--cyan); }
+
+    .repo-cluster-tag {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+    }
+
+    .repo-desc {
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .repo-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      padding-top: 12px;
+    }
+
+    .tier-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .tier-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--cyan);
+    }
+
+    .tier-card .tier-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .tier-card .tier-price {
+      font-size: 28px;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .tier-card ul {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tier-card li {
+      font-size: 13px;
+      color: var(--text-muted);
+      padding-left: 18px;
+      position: relative;
+    }
+
+    .tier-card li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: var(--cyan);
+      font-weight: 700;
+    }
+
+    .tier-card.tier-free .tier-price { color: var(--emerald); }
+    .tier-card.tier-pro .tier-price { color: var(--cyan); }
+    .tier-card.tier-enterprise .tier-price { color: var(--purple); }
+    .tier-card.tier-custom .tier-price { color: var(--text-main); }
+
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .matrix-table th {
+      text-align: left;
+      padding: 12px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-surface-elevated);
+    }
+
+    .matrix-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+    }
+
+    .matrix-table tr:hover td {
+      background: rgba(6, 182, 212, 0.03);
+    }
+
+    .matrix-table .layer-name {
+      color: var(--text-main);
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+
+    .matrix-table .capability-yes {
+      color: var(--emerald);
+      font-weight: 600;
+    }
+
+    .matrix-table .capability-partial {
+      color: var(--text-muted);
+    }
+
+    .matrix-table .capability-no {
+      color: var(--text-dim);
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--cyan);
+      margin: 24px 0 12px 0;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .info-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 18px;
+    }
+
+    .info-card h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .info-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding-top: 24px;
+      margin-top: 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+
+    @media (max-width: 768px) {
+      .container { padding: 20px 16px 60px 16px; }
+      h1 { font-size: 24px; }
+      .header-title-row { flex-direction: column; align-items: flex-start; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .tab-nav { gap: 4px; }
+      .tab-btn { padding: 10px 14px; font-size: 13px; }
+      .mermaid-box { padding: 16px 10px; }
+      .explorer-controls { flex-direction: column; align-items: stretch; }
+      .search-input { min-width: 100%; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-row { grid-template-columns: 1fr; }
+      .stat-val { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-bg"></div>
+  <div class="container">
+
+    <!-- Header -->
+    <header>
+      <div class="badge-bar">
+        <span class="badge cyan">Apex_ULL Core</span>
+        <span class="badge purple">120+ OSS Projects</span>
+        <span class="badge emerald">Unified Platform</span>
+      </div>
+      <div class="header-title-row">
+        <div>
+          <h1>Apex Ecosystem — Unified Architecture</h1>
+          <p class="subtitle">Comprehensive map of the Apex platform: ultra-low-latency infrastructure, graph intelligence, governance, commercial layers, and 120+ open-source projects organized by cluster.</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Projects</div>
+        <div class="stat-val" style="color: var(--cyan);">120+</div>
+        <div class="stat-sub">Open-source repositories</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Platform Layers</div>
+        <div class="stat-val" style="color: var(--purple);">6</div>
+        <div class="stat-sub">ULL → Graph → GRC → DC → Memory → Commercial</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Agent Slots</div>
+        <div class="stat-val" style="color: var(--emerald);">330</div>
+        <div class="stat-sub">12 Squads · Autonomous Workers</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Commercial Tiers</div>
+        <div class="stat-val">4</div>
+        <div class="stat-sub">Free / Pro / Enterprise / Custom</div>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('tab-platform')">Platform Architecture</button>
+      <button class="tab-btn" onclick="switchTab('tab-ecosystem')">Full Ecosystem Map</button>
+      <button class="tab-btn" onclick="switchTab('tab-commercial')">Commercial Offering</button>
+      <button class="tab-btn" onclick="switchTab('tab-fintech')">FinTech C2 Matrix</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 1: Apex Platform Architecture -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="tab-platform" class="panel active">
+      <div class="glass-card">
+        <div class="card-title">
+          <span>Apex Platform Architecture</span>
+        </div>
+        <p class="card-desc">
+          The Apex platform is structured in six layers, from ultra-low-latency infrastructure kernels through graph intelligence, governance, data center lifecycle, memory context, and the commercial layer. Each layer builds on the previous, creating a unified stack.
+        </p>
+
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    subgraph L1["Apex_ULL — Ultra-Low-Latency Infrastructure"]
+        direction TB
+        U1["C++20 Core"]
+        U2["Rust Core"]
+        U3["Python Bindings"]
+    end
+
+    subgraph L2["ApexGraphSwarm — Graph Intelligence"]
+        direction TB
+        G1["Graph Engine"]
+        G2["Multi-Agent Orchestration"]
+        G3["12 Squads · 330 Slots"]
+    end
+
+    subgraph L3["GRC_Claw — Governance Chassis"]
+        direction TB
+        R1["Risk Engine"]
+        R2["Compliance Monitor"]
+    end
+
+    subgraph L4["Data Center Commander — DC Lifecycle"]
+        direction TB
+        D1["Provisioning"]
+        D2["Monitoring"]
+    end
+
+    subgraph L5["Apex Memory Context"]
+        direction TB
+        M1["Cognee + Hindsight"]
+        M2["Nerve + Laya"]
+    end
+
+    subgraph L6["Commercial Layer"]
+        direction TB
+        C1["Free / Pro"]
+        C2["Enterprise / Custom"]
+    end
+
+    L1 -->|"Data Plane"| L2
+    L2 -->|"Governance"| L3
+    L3 -->|"Lifecycle"| L4
+    L4 -->|"Context"| L5
+    L5 -->|"Monetization"| L6
+    L6 -.->|"Feedback"| L1
+
+    style L1 fill:rgba(6,182,212,0.08),stroke:rgba(6,182,212,0.3),color:#f8fafc
+    style L2 fill:rgba(168,85,247,0.08),stroke:rgba(168,85,247,0.3),color:#f8fafc
+    style L3 fill:rgba(16,185,129,0.08),stroke:rgba(16,185,129,0.3),color:#f8fafc
+    style L4 fill:rgba(6,182,212,0.06),stroke:rgba(6,182,212,0.2),color:#f8fafc
+    style L5 fill:rgba(168,85,247,0.06),stroke:rgba(168,85,247,0.2),color:#f8fafc
+    style L6 fill:rgba(16,185,129,0.06),stroke:rgba(16,185,129,0.2),color:#f8fafc
+          </pre>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-card">
+            <h4>Apex_ULL</h4>
+            <p>C++20 and Rust kernels with Python bindings. Zero-copy shared-memory rings, deterministic prefix-KV cache, and sub-10ms video streaming. The foundation for all higher layers.</p>
+          </div>
+          <div class="info-card">
+            <h4>ApexGraphSwarm</h4>
+            <p>Graph intelligence engine with multi-agent orchestration. 12 squads managing 330 agent slots across compute, AI/ML, and DevOps domains.</p>
+          </div>
+          <div class="info-card">
+            <h4>GRC_Claw</h4>
+            <p>ISO 42001 governance chassis with risk engine and compliance monitor. Provides the trust backbone for all platform operations.</p>
+          </div>
+          <div class="info-card">
+            <h4>Data Center Commander</h4>
+            <p>Full data center lifecycle management: provisioning, monitoring, and autonomous incident response across multi-cloud deployments.</p>
+          </div>
+          <div class="info-card">
+            <h4>Apex Memory Context</h4>
+            <p>Cognee + Hindsight for knowledge graphs, Nerve + Laya for context management. Provides persistent memory across all agent operations.</p>
+          </div>
+          <div class="info-card">
+            <h4>Commercial Layer</h4>
+            <p>Four-tier monetization: Free OSS, Professional ($99/mo), Enterprise ($999/mo), and Custom (contact sales). White-label ready.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 2: Full Ecosystem Map -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="tab-ecosystem" class="panel">
+      <div class="glass-card">
+        <div class="card-title">
+          <span>Full Ecosystem Map — 120+ Projects by Cluster</span>
+        </div>
+        <p class="card-desc">
+          All 120+ open-source projects organized into 10 clusters. Each cluster represents a domain of the Apex platform, from core infrastructure to edge AI.
+        </p>
+
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    subgraph CORE["Core Infrastructure"]
+        direction LR
+        C1["Apex_ULL"]
+        C2["ApexGraphSwarm"]
+        C3["GRC_Claw"]
+    end
+
+    subgraph FINTECH["FinTech"]
+        direction LR
+        F1["chrono-arbitrage"]
+        F2["rtb-arbitrage"]
+        F3["payment-fraud"]
+        F4["portfolio-growth"]
+    end
+
+    subgraph AIINFRA["AI Infrastructure"]
+        direction LR
+        A1["hyper-agent-os"]
+        A2["swarm-substrate"]
+        A3["agent-immune-kernel"]
+    end
+
+    subgraph CLOUD["Cloud & FinOps"]
+        direction LR
+        CL1["cost-optimization"]
+        CL2["k8s-finops"]
+    end
+
+    subgraph SEC["Security"]
+        direction LR
+        S1["ai-security-scanner"]
+        S2["vuln-triage"]
+    end
+
+    subgraph OBS["Observability"]
+        direction LR
+        O1["aiops-observability"]
+    end
+
+    subgraph NEURO["Neuromorphic"]
+        direction LR
+        N1["neuro-manifold"]
+        N2["neuro-spatial"]
+    end
+
+    subgraph PQ["Post-Quantum"]
+        direction LR
+        P1["pqc-enclave"]
+        P2["pqattest"]
+    end
+
+    subgraph PHYS["Physical AI"]
+        direction LR
+        H1["cyborg-bench"]
+        H2["kinetic-guard"]
+    end
+
+    subgraph EDGE["Edge AI"]
+        direction LR
+        E1["edge-vision-mesh"]
+    end
+
+    CORE -->|"Data Plane"| AIINFRA
+    AIINFRA -->|"Governance"| SEC
+    AIINFRA -->|"Orchestration"| CLOUD
+    CLOUD -->|"Settlement"| FINTECH
+    FINTECH -->|"Monitoring"| OBS
+    SEC -->|"Threat Feed"| NEURO
+    NEURO -->|"Crypto"| PQ
+    PQ -->|"Attestation"| PHYS
+    PHYS -->|"Sensing"| EDGE
+    EDGE -.->|"Telemetry"| CORE
+
+    style CORE fill:rgba(6,182,212,0.08),stroke:rgba(6,182,212,0.3),color:#f8fafc
+    style FINTECH fill:rgba(16,185,129,0.08),stroke:rgba(16,185,129,0.3),color:#f8fafc
+    style AIINFRA fill:rgba(168,85,247,0.08),stroke:rgba(168,85,247,0.3),color:#f8fafc
+    style CLOUD fill:rgba(6,182,212,0.06),stroke:rgba(6,182,212,0.2),color:#f8fafc
+    style SEC fill:rgba(168,85,247,0.06),stroke:rgba(168,85,247,0.2),color:#f8fafc
+    style OBS fill:rgba(16,185,129,0.06),stroke:rgba(16,185,129,0.2),color:#f8fafc
+    style NEURO fill:rgba(6,182,212,0.05),stroke:rgba(6,182,212,0.15),color:#f8fafc
+    style PQ fill:rgba(168,85,247,0.05),stroke:rgba(168,85,247,0.15),color:#f8fafc
+    style PHYS fill:rgba(16,185,129,0.05),stroke:rgba(16,185,129,0.15),color:#f8fafc
+    style EDGE fill:rgba(6,182,212,0.04),stroke:rgba(6,182,212,0.1),color:#f8fafc
+          </pre>
+        </div>
+      </div>
+
+      <!-- Project Explorer with Search/Filter -->
+      <div class="glass-card">
+        <div class="card-title">
+          <span>Project Explorer</span>
+        </div>
+        <div class="explorer-controls">
+          <input type="text" class="search-input" id="project-search" placeholder="Search projects by name or description..." oninput="filterProjects()">
+          <div class="filter-chip-group" id="cluster-filters">
+            <span class="filter-chip active" data-cluster="all" onclick="setClusterFilter('all')">All</span>
+            <span class="filter-chip" data-cluster="core" onclick="setClusterFilter('core')">Core</span>
+            <span class="filter-chip" data-cluster="fintech" onclick="setClusterFilter('fintech')">FinTech</span>
+            <span class="filter-chip" data-cluster="aiinfra" onclick="setClusterFilter('aiinfra')">AI Infra</span>
+            <span class="filter-chip" data-cluster="cloud" onclick="setClusterFilter('cloud')">Cloud</span>
+            <span class="filter-chip" data-cluster="security" onclick="setClusterFilter('security')">Security</span>
+            <span class="filter-chip" data-cluster="observability" onclick="setClusterFilter('observability')">Observability</span>
+            <span class="filter-chip" data-cluster="neuromorphic" onclick="setClusterFilter('neuromorphic')">Neuromorphic</span>
+            <span class="filter-chip" data-cluster="postquantum" onclick="setClusterFilter('postquantum')">Post-Quantum</span>
+            <span class="filter-chip" data-cluster="physicalai" onclick="setClusterFilter('physicalai')">Physical AI</span>
+            <span class="filter-chip" data-cluster="edgeai" onclick="setClusterFilter('edgeai')">Edge AI</span>
+          </div>
+        </div>
+        <div class="grid-3" id="project-grid">
+          <!-- Projects rendered by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 3: Commercial Offering -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="tab-commercial" class="panel">
+      <div class="glass-card">
+        <div class="card-title">
+          <span>Commercial Offering — Four-Tier Model</span>
+        </div>
+        <p class="card-desc">
+          The Apex platform monetizes through four tiers, from free open-source to custom enterprise deployments. Target: ~$30K MRR through diversified revenue streams.
+        </p>
+
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    subgraph TIERS["Commercial Tiers"]
+        direction TB
+        T1["Free / OSS<br/>$0"]
+        T2["Professional<br/>$99/mo"]
+        T3["Enterprise<br/>$999/mo"]
+        T4["Custom<br/>Contact Sales"]
+    end
+
+    subgraph FEATURES["Key Capabilities"]
+        direction TB
+        F1["120+ OSS Projects"]
+        F2["Priority Support"]
+        F3["Custom Development"]
+        F4["White-label / OEM"]
+    end
+
+    subgraph REVENUE["Revenue Streams"]
+        direction TB
+        R1["Subscriptions"]
+        R2["Services"]
+        R3["Platform Fees"]
+    end
+
+    T1 -->|"Upgrade Path"| T2
+    T2 -->|"Upgrade Path"| T3
+    T3 -->|"Upgrade Path"| T4
+    T1 --- F1
+    T2 --- F2
+    T3 --- F3
+    T4 --- F4
+    F1 --- R1
+    F2 --- R1
+    F3 --- R2
+    F4 --- R3
+
+    style TIERS fill:rgba(6,182,212,0.08),stroke:rgba(6,182,212,0.3),color:#f8fafc
+    style FEATURES fill:rgba(168,85,247,0.08),stroke:rgba(168,85,247,0.3),color:#f8fafc
+    style REVENUE fill:rgba(16,185,129,0.08),stroke:rgba(16,185,129,0.3),color:#f8fafc
+          </pre>
+        </div>
+
+        <div class="grid-4">
+          <div class="tier-card tier-free">
+            <div class="tier-name">Free / OSS</div>
+            <div class="tier-price">$0</div>
+            <ul>
+              <li>All 120+ OSS projects</li>
+              <li>Community Discord support</li>
+              <li>Basic workflow templates</li>
+              <li>Public documentation</li>
+              <li>Self-hosted deployment</li>
+            </ul>
+          </div>
+          <div class="tier-card tier-pro">
+            <div class="tier-name">Professional</div>
+            <div class="tier-price">$99/mo</div>
+            <ul>
+              <li>Everything in Free</li>
+              <li>Priority email support</li>
+              <li>Pre-built workflow library</li>
+              <li>Advanced integrations</li>
+              <li>Team collaboration (5 seats)</li>
+              <li>Cloud hosting option</li>
+            </ul>
+          </div>
+          <div class="tier-card tier-enterprise">
+            <div class="tier-name">Enterprise</div>
+            <div class="tier-price">$999/mo</div>
+            <ul>
+              <li>Everything in Professional</li>
+              <li>Custom development</li>
+              <li>99.9% SLA</li>
+              <li>Dedicated support engineer</li>
+              <li>Unlimited seats</li>
+              <li>White-label dashboard</li>
+              <li>On-premise deployment</li>
+            </ul>
+          </div>
+          <div class="tier-card tier-custom">
+            <div class="tier-name">Custom</div>
+            <div class="tier-price">Contact</div>
+            <ul>
+              <li>Everything in Enterprise</li>
+              <li>OEM licensing</li>
+              <li>Full white-label / rebrand</li>
+              <li>Bespoke feature development</li>
+              <li>Multi-region deployment</li>
+              <li>Custom SLA terms</li>
+              <li>Partner revenue sharing</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- GTM Motion -->
+      <div class="glass-card">
+        <div class="card-title">
+          <span>Go-to-Market Motion</span>
+        </div>
+        <p class="card-desc">
+          12 cross-functional squads managing 330 agent slots across compute, AI/ML, and DevOps. Revenue through subscriptions, services, and platform fees.
+        </p>
+
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    subgraph GTM["Go-to-Market Engine"]
+        direction TB
+        G1["12 Squads"]
+        G2["330 Agent Slots"]
+        G3["Broker Channel"]
+    end
+
+    subgraph SQUADS["Squad Allocation"]
+        direction TB
+        S1["Squads 1-4<br/>Core Platform"]
+        S2["Squads 5-8<br/>AI/ML"]
+        S3["Squads 9-12<br/>Growth"]
+    end
+
+    subgraph CHANNELS["Revenue Channels"]
+        direction TB
+        CH1["Subscriptions<br/>$99-$999/mo"]
+        CH2["Services<br/>Project-based"]
+        CH3["Platform<br/>15% Commission"]
+    end
+
+    GTM --> SQUADS
+    GTM --> CHANNELS
+    G1 --> S1
+    G1 --> S2
+    G1 --> S3
+    G2 --> S1
+    G2 --> S2
+    G2 --> S3
+    G3 --> CH1
+    G3 --> CH2
+    G3 --> CH3
+
+    style GTM fill:rgba(6,182,212,0.08),stroke:rgba(6,182,212,0.3),color:#f8fafc
+    style SQUADS fill:rgba(168,85,247,0.08),stroke:rgba(168,85,247,0.3),color:#f8fafc
+    style CHANNELS fill:rgba(16,185,129,0.08),stroke:rgba(16,185,129,0.3),color:#f8fafc
+          </pre>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-card">
+            <h4>Phase 1 — Foundation</h4>
+            <p>Launch Free + Professional tiers. Target ~50 Pro subscribers at $5K MRR. Focus on community building and OSS adoption.</p>
+          </div>
+          <div class="info-card">
+            <h4>Phase 2 — Scale</h4>
+            <p>Add Enterprise tier + Broker Channel. Target $15K MRR with 10 Enterprise customers and platform fees.</p>
+          </div>
+          <div class="info-card">
+            <h4>Phase 3 — Expand</h4>
+            <p>Custom tier + OEM + global expansion. Target $30K+ MRR with 15 Enterprise, Custom contracts, and OEM licensing.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 4: FinTech C2 Matrix -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="tab-fintech" class="panel">
+      <div class="glass-card">
+        <div class="card-title">
+          <span>FinTech C2 Matrix — 20-Layer Capability Mapping</span>
+        </div>
+        <p class="card-desc">
+          Comprehensive 20-layer capability matrix mapping the FinTech stack from core infrastructure through settlement, compliance, and commercial layers. Each layer is mapped to its implementation status.
+        </p>
+
+        <div class="mermaid-box">
+          <pre class="mermaid">
+flowchart TD
+    subgraph INFRA["Infrastructure Layers"]
+        direction TB
+        I1["L1: Ultra-Low-Latency Core"]
+        I2["L2: Graph Intelligence"]
+        I3["L3: Governance & Risk"]
+    end
+
+    subgraph FIN["FinTech Core"]
+        direction TB
+        F1["L4: Payment Processing"]
+        F2["L5: Fraud Detection"]
+        F3["L6: Portfolio Engine"]
+        F4["L7: Arbitrage Systems"]
+    end
+
+    subgraph SETTLE["Settlement & Rails"]
+        direction TB
+        S1["L8: Multi-Rail Settlement"]
+        S2["L9: ISO 20022 Engine"]
+        S3["L10: PCI DSS 4.0"]
+    end
+
+    subgraph ADV["Advanced Capabilities"]
+        direction TB
+        A1["L11: Real-Time Bidding"]
+        A2["L12: Chrono-Arbitrage"]
+        A3["L13: Bonding Curves"]
+        A4["L14: Merchant Profit OS"]
+    end
+
+    subgraph COMM["Commercial Layer"]
+        direction TB
+        C1["L15: Subscription Billing"]
+        C2["L16: White-Label"]
+        C3["L17: OEM Licensing"]
+        C4["L18: Broker Channel"]
+        C5["L19: Revenue Share"]
+        C6["L20: Custom Development"]
+    end
+
+    INFRA -->|"Data Plane"| FIN
+    FIN -->|"Settlement"| SETTLE
+    SETTLE -->|"Advanced"| ADV
+    ADV -->|"Monetization"| COMM
+
+    style INFRA fill:rgba(6,182,212,0.08),stroke:rgba(6,182,212,0.3),color:#f8fafc
+    style FIN fill:rgba(168,85,247,0.08),stroke:rgba(168,85,247,0.3),color:#f8fafc
+    style SETTLE fill:rgba(16,185,129,0.08),stroke:rgba(16,185,129,0.3),color:#f8fafc
+    style ADV fill:rgba(6,182,212,0.06),stroke:rgba(6,182,212,0.2),color:#f8fafc
+    style COMM fill:rgba(168,85,247,0.06),stroke:rgba(168,85,247,0.2),color:#f8fafc
+          </pre>
+        </div>
+
+        <!-- C2 Matrix Table -->
+        <div style="overflow-x: auto; margin-top: 20px;">
+          <table class="matrix-table">
+            <thead>
+              <tr>
+                <th>Layer</th>
+                <th>Capability</th>
+                <th>Status</th>
+                <th>Projects</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="layer-name">L1</td><td>Ultra-Low-Latency Core</td><td class="capability-yes">● Implemented</td><td>Apex_ULL, C++20/Rust Kernels</td></tr>
+              <tr><td class="layer-name">L2</td><td>Graph Intelligence</td><td class="capability-yes">● Implemented</td><td>ApexGraphSwarm, 12 Squads</td></tr>
+              <tr><td class="layer-name">L3</td><td>Governance & Risk</td><td class="capability-yes">● Implemented</td><td>GRC_Claw, ISO 42001</td></tr>
+              <tr><td class="layer-name">L4</td><td>Payment Processing</td><td class="capability-yes">● Implemented</td><td>chrono-arbitrage, rtb-arbitrage</td></tr>
+              <tr><td class="layer-name">L5</td><td>Fraud Detection</td><td class="capability-yes">● Implemented</td><td>real-time-payment-fraud</td></tr>
+              <tr><td class="layer-name">L6</td><td>Portfolio Engine</td><td class="capability-yes">● Implemented</td><td>portfolio-growth-engine</td></tr>
+              <tr><td class="layer-name">L7</td><td>Arbitrage Systems</td><td class="capability-yes">● Implemented</td><td>chrono-arbitrage, rtb-arbitrage</td></tr>
+              <tr><td class="layer-name">L8</td><td>Multi-Rail Settlement</td><td class="capability-yes">● Implemented</td><td>agentic-fintech-kernel</td></tr>
+              <tr><td class="layer-name">L9</td><td>ISO 20022 Engine</td><td class="capability-yes">● Implemented</td><td>agentic-fintech-kernel</td></tr>
+              <tr><td class="layer-name">L10</td><td>PCI DSS 4.0</td><td class="capability-yes">● Implemented</td><td>zk-agent-escrow</td></tr>
+              <tr><td class="layer-name">L11</td><td>Real-Time Bidding</td><td class="capability-yes">● Implemented</td><td>rtb-arbitrage</td></tr>
+              <tr><td class="layer-name">L12</td><td>Chrono-Arbitrage</td><td class="capability-yes">● Implemented</td><td>chrono-arbitrage</td></tr>
+              <tr><td class="layer-name">L13</td><td>Bonding Curves</td><td class="capability-yes">● Implemented</td><td>bonding-curve</td></tr>
+              <tr><td class="layer-name">L14</td><td>Merchant Profit OS</td><td class="capability-yes">● Implemented</td><td>merchant-profit-os</td></tr>
+              <tr><td class="layer-name">L15</td><td>Subscription Billing</td><td class="capability-yes">● Implemented</td><td>Commercial Layer</td></tr>
+              <tr><td class="layer-name">L16</td><td>White-Label</td><td class="capability-yes">● Implemented</td><td>Enterprise Tier</td></tr>
+              <tr><td class="layer-name">L17</td><td>OEM Licensing</td><td class="capability-yes">● Implemented</td><td>Custom Tier</td></tr>
+              <tr><td class="layer-name">L18</td><td>Broker Channel</td><td class="capability-yes">● Implemented</td><td>Marketplace</td></tr>
+              <tr><td class="layer-name">L19</td><td>Revenue Share</td><td class="capability-yes">● Implemented</td><td>Partner Program</td></tr>
+              <tr><td class="layer-name">L20</td><td>Custom Development</td><td class="capability-yes">● Implemented</td><td>Enterprise Services</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <span>Apex Ecosystem · Unified Architecture & Commercial Cockpit</span>
+      <span>Domain: a2zsoc.com · 120+ OSS Projects · Generated 2026-09-30</span>
+    </footer>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════
+    // Tab Switching
+    // ═══════════════════════════════════════════════════════════════
+    function switchTab(tabId) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Project Data (120+ projects across 10 clusters)
+    // ═══════════════════════════════════════════════════════════════
+    const projects = [
+      // Core Infrastructure
+      { name: "Apex_ULL", cluster: "core", desc: "Ultra-low-latency C++20/Rust/Python kernels with zero-copy shared memory" },
+      { name: "ApexGraphSwarm", cluster: "core", desc: "Graph intelligence engine with multi-agent orchestration" },
+      { name: "GRC_Claw", cluster: "core", desc: "ISO 42001 governance chassis with risk engine" },
+      { name: "Data Center Commander", cluster: "core", desc: "Full DC lifecycle: provisioning, monitoring, incident response" },
+      { name: "Apex Memory Context", cluster: "core", desc: "Cognee + Hindsight knowledge graphs, Nerve + Laya context" },
+      { name: "hyper-mesh", cluster: "core", desc: "Kademlia DHT P2P swarm network" },
+      { name: "agent-telepathy-bus", cluster: "core", desc: "Zero-copy shared-memory ring for agent communication" },
+      { name: "cache-forge", cluster: "core", desc: "Deterministic prefix-KV cache engine" },
+      { name: "speculative-swarm", cluster: "core", desc: "Speculative branching swarm for parallel execution" },
+      { name: "formal-guard", cluster: "core", desc: "SMT/Z3 AST symbolic proof engine" },
+      { name: "git-arbiter", cluster: "core", desc: "Semantic AST merge arbiter" },
+      { name: "ast-cadence", cluster: "core", desc: "Syntax cadence invariant checker" },
+      { name: "meta-synthesizer", cluster: "core", desc: "Zero-downtime hot-code patcher" },
+
+      // FinTech
+      { name: "chrono-arbitrage", cluster: "fintech", desc: "Chronological arbitrage engine for temporal price differences" },
+      { name: "rtb-arbitrage", cluster: "fintech", desc: "Real-time bidding arbitrage system" },
+      { name: "bonding-curve", cluster: "fintech", desc: "Bonding curve token pricing engine" },
+      { name: "real-time-payment-fraud", cluster: "fintech", desc: "Real-time payment fraud detection" },
+      { name: "merchant-profit-os", cluster: "fintech", desc: "Merchant profit optimization system" },
+      { name: "portfolio-growth-engine", cluster: "fintech", desc: "Automated portfolio growth engine" },
+      { name: "agentic-fintech-kernel", cluster: "fintech", desc: "Universal rail dispatch & ISO 20022 engine" },
+      { name: "zk-agent-escrow", cluster: "fintech", desc: "PCI DSS 4.0 blinded proof escrow" },
+      { name: "agent-credit-exchange", cluster: "fintech", desc: "Autonomous liquidity arbitrage exchange" },
+
+      // AI Infrastructure
+      { name: "hyper-agent-os", cluster: "aiinfra", desc: "Hyper-scale agent operating system" },
+      { name: "swarm-substrate", cluster: "aiinfra", desc: "Swarm coordination substrate" },
+      { name: "agent-immune-kernel", cluster: "aiinfra", desc: "Agent immune system kernel" },
+      { name: "phantom-v8", cluster: "aiinfra", desc: "CDP-free USB HID kernel injector" },
+      { name: "agent-webrtc-stream", cluster: "aiinfra", desc: "Sub-10ms 60fps video streaming" },
+      { name: "ghost-grounding", cluster: "aiinfra", desc: "Accessibility tree sub-pixel fusion" },
+      { name: "swarm-desktop-os", cluster: "aiinfra", desc: "Virtual X11/Wayland desktop fabric" },
+
+      // Cloud & FinOps
+      { name: "ai-cloud-cost-optimization", cluster: "cloud", desc: "AI-driven cloud cost optimization" },
+      { name: "kubernetes-ai-finops", cluster: "cloud", desc: "Kubernetes AI FinOps platform" },
+      { name: "kubernetes-ai-sre-platform", cluster: "cloud", desc: "EKS autonomous incident response" },
+      { name: "cloud-grc-harvester", cluster: "cloud", desc: "Multi-cloud compliance crosswalk" },
+
+      // Security
+      { name: "agentproof-ai-security-scanner", cluster: "security", desc: "AI-powered security scanner" },
+      { name: "vuln-triage", cluster: "security", desc: "Automated vulnerability triage" },
+      { name: "enterprise-mcp-firewall", cluster: "security", desc: "OWASP LLM01 proxy shield" },
+      { name: "honey-agent", cluster: "security", desc: "Canary traps & counter-intelligence" },
+      { name: "agent-jailbreak-firewall", cluster: "security", desc: "Adversarial prompt tripwire" },
+
+      // Observability
+      { name: "aiops-observability", cluster: "observability", desc: "AIOps observability platform" },
+      { name: "ma-vdr-diligence-os", cluster: "observability", desc: "EBITDA haircut diligence engine" },
+      { name: "tech-balance-sheet", cluster: "observability", desc: "Technical debt valuation engine" },
+
+      // Neuromorphic
+      { name: "neuro-manifold", cluster: "neuromorphic", desc: "Neuromorphic manifold computing" },
+      { name: "neuro-spatial", cluster: "neuromorphic", desc: "Neuromorphic spatial processing" },
+
+      // Post-Quantum
+      { name: "pqc-enclave", cluster: "postquantum", desc: "Post-quantum cryptographic enclave" },
+      { name: "pqattest", cluster: "postquantum", desc: "Post-quantum attestation" },
+      { name: "CBOMkit", cluster: "postquantum", desc: "NIST FIPS 203/204 ML-KEM/ML-DSA enclave" },
+
+      // Physical AI
+      { name: "cyborg-bench", cluster: "physicalai", desc: "Physical AI benchmarking platform" },
+      { name: "kinetic-guard", cluster: "physicalai", desc: "Kinetic threat detection & response" },
+
+      // Edge AI
+      { name: "edge-vision-mesh", cluster: "edgeai", desc: "Edge vision mesh network" },
+    ];
+
+    // ═══════════════════════════════════════════════════════════════
+    // Render Projects
+    // ═══════════════════════════════════════════════════════════════
+    function renderProjects(filter = "all", search = "") {
+      const grid = document.getElementById("project-grid");
+      const filtered = projects.filter(p => {
+        const matchCluster = filter === "all" || p.cluster === filter;
+        const matchSearch = search === "" ||
+          p.name.toLowerCase().includes(search.toLowerCase()) ||
+          p.desc.toLowerCase().includes(search.toLowerCase());
+        return matchCluster && matchSearch;
+      });
+
+      grid.innerHTML = filtered.map(p => `
+        <div class="repo-card">
+          <div class="repo-header">
+            <span class="repo-name">${p.name}</span>
+            <span class="repo-cluster-tag">${p.cluster}</span>
+          </div>
+          <div class="repo-desc">${p.desc}</div>
+          <div class="repo-meta">
+            <span>OSS</span>
+            <span style="color: var(--cyan);">View →</span>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function setClusterFilter(cluster) {
+      document.querySelectorAll('#cluster-filters .filter-chip').forEach(c => c.classList.remove('active'));
+      document.querySelector(`#cluster-filters .filter-chip[data-cluster="${cluster}"]`).classList.add('active');
+      const search = document.getElementById("project-search").value;
+      renderProjects(cluster, search);
+    }
+
+    function filterProjects() {
+      const search = document.getElementById("project-search").value;
+      const activeCluster = document.querySelector('#cluster-filters .filter-chip.active').dataset.cluster;
+      renderProjects(activeCluster, search);
+    }
+
+    // Initial render
+    renderProjects();
+
+    // ═══════════════════════════════════════════════════════════════
+    // Mermaid Initialization
+    // ═══════════════════════════════════════════════════════════════
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis',
+        nodeSpacing: 50,
+        rankSpacing: 60
+      },
+      themeVariables: {
+        darkMode: true,
+        background: '#090d16',
+        primaryColor: '#161e31',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: 'rgba(6, 182, 212, 0.4)',
+        lineColor: 'rgba(6, 182, 212, 0.5)',
+        secondaryColor: '#0f1422',
+        tertiaryColor: '#161e31',
+        clusterBkg: '#0f1422',
+        clusterBorder: 'rgba(255, 255, 255, 0.1)',
+        titleColor: '#f8fafc',
+        edgeLabelBackground: '#090d16',
+        fontSize: '14px',
+        nodeBorder: 'rgba(6, 182, 212, 0.4)'
+      }
+    });
+  </script>
+</body>
+</html>
