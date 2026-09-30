@@ -10,9 +10,9 @@
 ## Table of Contents
 
 1. [Project Overview](#1-project-overview)
-2. [Features](#2-features)
-3. [Benchmark Results](#3-benchmark-results)
-4. [Architecture](#4-architecture)
+2. [Architecture](#2-architecture)
+3. [Features](#3-features)
+4. [Benchmark Results](#4-benchmark-results)
 5. [Quick Start](#5-quick-start)
 6. [API Reference](#6-api-reference)
 7. [Examples](#7-examples)
@@ -23,7 +23,7 @@
 
 ## 1. Project Overview
 
-ULL is a research-driven reference architecture with **working implementations** — not mockups — covering the full ultra-low-latency stack from FPGA fabric to application software. It consolidates 40+ research reports, production-grade C/C++/Rust/Python code, and a comprehensive benchmark suite into a single repository.
+Apex_ULL is a research-driven reference architecture with **working implementations** — not mockups — covering the full ultra-low-latency stack from FPGA fabric to application software. It consolidates 135+ research reports, production-grade C/C++/Rust/Python code, and a comprehensive benchmark suite into a single repository.
 
 ### Domains Covered
 
@@ -34,14 +34,6 @@ ULL is a research-driven reference architecture with **working implementations**
 | **Payment Networks** | 42 ms – 1 s | gRPC, cell-based architecture, multi-region | 📋 Architecture |
 | **Gaming** | 3 ms – 100 ms | NVIDIA Reflex, AMD Anti-Lag, Apple Silicon | 📋 Research |
 
-### Goals
-
-- Map the full latency hierarchy from nanoseconds to seconds
-- Deliver production-ready implementations in C, C++, Rust, and Python
-- Provide benchmark methodology that exceeds industry standards (STAC, IEEE)
-- Catalog optimization techniques with measured impact
-- Serve as the definitive open-source reference for ULL system design
-
 ### Repository Structure
 
 ```
@@ -51,196 +43,176 @@ Apex_ULL/
 ├── benchmarks/            # 10 suites: STAC, latency, throughput, determinism, jitter, scalability, availability, cost, power, security
 ├── evaluation/            # Python frameworks: latency ML, throughput regression, determinism SPC, availability Bayesian, cost Monte Carlo, power TOPSIS, scalability Random Forest, reliability ensemble, security Isolation Forest
 ├── reports/               # 135+ research reports (HFT firms, FPGA, networks, payments, ICP, competitive, investor, due diligence, gap analysis)
-├── docs/                  # Architecture (5 mermaid diagrams), API reference, tutorials, 8 standalone HTML mermaid diagrams
+├── docs/                  # Architecture (5 mermaid diagrams), API reference, tutorials, 2 standalone HTML mermaid diagrams
 ├── security/              # Trivy, Falco, OPA/Gatekeeper configs
 └── .github/workflows/     # 10 CI/CD workflows (5 C++ + 5 Rust)
 ```
 
 ---
 
-## 2. Related Projects
+## 2. Architecture
 
-Apex_ULL is part of the **Apex** ecosystem — a comprehensive collection of open-source projects spanning AI infrastructure, swarm orchestration, governance, and ultra-low-latency systems.
+### 2.1 Apex Platform — Unified Architecture
 
-### Apex Ecosystem
+The Apex ecosystem is a unified platform of 120+ open-source projects spanning AI infrastructure, swarm orchestration, governance, and ultra-low-latency systems. Apex_ULL is the infrastructure layer.
 
-| Project | Description | GitHub |
-|---------|-------------|--------|
-| **ApexGraphSwarm** | Graph intelligence + multi-agent orchestration workbench | [github.com/AAH20/ApexGraphSwarm](https://github.com/AAH20/ApexGraphSwarm) |
-| **agentic-graph-swarm-kernel** | Swarm orchestration kernel with 10 NP-hard solvers | [github.com/AAH20/agentic-graph-swarm-kernel](https://github.com/AAH20/agentic-graph-swarm-kernel) |
-| **swarm-substrate** | Trust layer for multi-agent swarms | [github.com/AAH20/swarm-substrate](https://github.com/AAH20/swarm-substrate) |
-| **apex-swarm-orchestrator-kernel** | Hierarchical multi-agent orchestration | [github.com/AAH20/apex-swarm-orchestrator-kernel](https://github.com/AAH20/apex-swarm-orchestrator-kernel) |
-| **apex-kernel-mesh** | Kernel mesh networking | [github.com/AAH20/apex-kernel-mesh](https://github.com/AAH20/apex-kernel-mesh) |
-| **apex-mcp-gateway-kernel** | MCP gateway kernel | [github.com/AAH20/apex-mcp-gateway-kernel](https://github.com/AAH20/apex-mcp-gateway-kernel) |
-| **apex_infrastructure_killswitch_kernel** | Infrastructure kill switch | [github.com/AAH20/apex_infrastructure_killswitch_kernel](https://github.com/AAH20/apex_infrastructure_killswitch_kernel) |
-| **apex_quant_whale_kernel** | Quant whale detection kernel | [github.com/AAH20/apex_quant_whale_kernel](https://github.com/AAH20/apex_quant_whale_kernel) |
-| **apex-mcp-foundry** | MCP tool foundry | [github.com/AAH20/apex-mcp-foundry](https://github.com/AAH20/apex-mcp-foundry) |
-| **GRC_Claw** | ISO 42001 / agentic AI governance chassis | [github.com/AAH20/GRC_Claw](https://github.com/AAH20/GRC_Claw) |
-| **Data Center Commander** | Data-center lifecycle decision support | [github.com/AAH20/data-center-commander](https://github.com/AAH20/data-center-commander) |
+```mermaid
+flowchart TD
+    subgraph Platform["Apex Platform"]
+        AGS["ApexGraphSwarm\nGraph Intelligence\nMulti-Agent Orchestration"]
+        GRC["GRC_Claw\nISO 42001 Governance"]
+        DCC["Data Center Commander\nDC Lifecycle"]
+        MC["Apex Memory Context\nCognee + Nerve + Laya"]
+    end
 
-### FinTech & Trading Projects
+    subgraph ULL["Apex_ULL — Ultra-Low Latency"]
+        CPP["C++20\nFeed Handler, Matching\nOrder Book, Risk"]
+        Rust["Rust\nMatching, Order Book\nSignal, Compliance"]
+        Python["Python Kernels\nScheduling, Partitioning\nRouting, Evaluation"]
+    end
 
-| Project | Description | GitHub |
-|---------|-------------|--------|
-| **chrono-arbitrage** | Autonomous narrative intelligence & liquidity arbitrage | [github.com/AAH20/chrono-arbitrage](https://github.com/AAH20/chrono-arbitrage) |
-| **rtb-arbitrage** | Real-time bidding arbitrage | [github.com/AAH20/rtb-arbitrage](https://github.com/AAH20/rtb-arbitrage) |
-| **bonding-curve** | Bonding curve DeFi protocol | [github.com/AAH20/bonding-curve](https://github.com/AAH20/bonding-curve) |
-| **merchant-profit-os** | Merchant profit optimization | [github.com/AAH20/merchant-profit-os](https://github.com/AAH20/merchant-profit-os) |
-| **real-time-payment-fraud-platform** | Real-time payment fraud detection | [github.com/AAH20/real-time-payment-fraud-platform](https://github.com/AAH20/real-time-payment-fraud-platform) |
-| **autonomous-order-to-cash-revenue-assurance** | Order-to-cash revenue assurance | [github.com/AAH20/autonomous-order-to-cash-revenue-assurance](https://github.com/AAH20/autonomous-order-to-cash-revenue-assurance) |
-| **ai-factory-revenue-twin** | AI factory revenue twin | [github.com/AAH20/ai-factory-revenue-twin](https://github.com/AAH20/ai-factory-revenue-twin) |
-| **portfolio-growth-engine** | Portfolio growth engine | [github.com/AAH20/portfolio-growth-engine](https://github.com/AAH20/portfolio-growth-engine) |
-| **growth-bandit** | Growth bandit optimization | [github.com/AAH20/growth-bandit](https://github.com/AAH20/growth-bandit) |
-| **growth-decision-engine** | Marketing analytics & incrementality testing | [github.com/AAH20/growth-decision-engine](https://github.com/AAH20/growth-decision-engine) |
-| **growth-syndicate** | Growth syndicate | [github.com/AAH20/growth-syndicate](https://github.com/AAH20/growth-syndicate) |
-| **churn-inversion** | Churn inversion analysis | [github.com/AAH20/churn-inversion](https://github.com/AAH20/churn-inversion) |
-| **flywheel-engine** | Flywheel growth engine | [github.com/AAH20/flywheel-engine](https://github.com/AAH20/flywheel-engine) |
-| **elasticity-engine** | Elasticity engine | [github.com/AAH20/elasticity-engine](https://github.com/AAH20/elasticity-engine) |
-| **decision-world** | Decision world framework | [github.com/AAH20/decision-world](https://github.com/AAH20/decision-world) |
-| **strategy-genome** | Strategy genome | [github.com/AAH20/strategy-genome](https://github.com/AAH20/strategy-genome) |
-| **tensor-forge** | Bare-metal deep-kernel fused JIT | [github.com/AAH20/tensor-forge](https://github.com/AAH20/tensor-forge) |
+    subgraph FinTech["FinTech"]
+        CA["chrono-arbitrage"]
+        RTB["rtb-arbitrage"]
+        BC["bonding-curve"]
+        PP["real-time-payment-fraud"]
+        MPO["merchant-profit-os"]
+        PGE["portfolio-growth-engine"]
+    end
 
-### AI Infrastructure & Swarm Projects
+    subgraph AIInfra["AI Infrastructure"]
+        HA["hyper-agent-os"]
+        SS["swarm-substrate"]
+        AIK["agent-immune-kernel"]
+        ATF["agent-trust-fabric"]
+    end
 
-| Project | Description | GitHub |
-|---------|-------------|--------|
-| **hyper-agent-os** | Distributed multi-agent runtime & swarm substrate | [github.com/AAH20/hyper-agent-os](https://github.com/AAH20/hyper-agent-os) |
-| **Swarm-Context-Commander** | Swarm context commander | [github.com/AAH20/Swarm-Context-Commander](https://github.com/AAH20/Swarm-Context-Commander) |
-| **swarm-sync** | Swarm synchronization | [github.com/AAH20/swarm-sync](https://github.com/AAH20/swarm-sync) |
-| **swarm-eval-harness** | Multi-turn agentic metamorphic fuzzer | [github.com/AAH20/swarm-eval-harness](https://github.com/AAH20/swarm-eval-harness) |
-| **agent-capability-foundry** | Agent capability foundry | [github.com/AAH20/agent-capability-foundry](https://github.com/AAH20/agent-capability-foundry) |
-| **agent-commerce** | Agent commerce | [github.com/AAH20/agent-commerce](https://github.com/AAH20/agent-commerce) |
-| **agent-control-standard-conformance** | Agent control standard conformance | [github.com/AAH20/agent-control-standard-conformance](https://github.com/AAH20/agent-control-standard-conformance) |
-| **agent-immune-kernel** | Autonomous agentic immune hypervisor | [github.com/AAH20/agent-immune-kernel](https://github.com/AAH20/agent-immune-kernel) |
-| **agent-trust-fabric** | Agent trust fabric | [github.com/AAH20/agent-trust-fabric](https://github.com/AAH20/agent-trust-fabric) |
-| **agentic-ai-infrastructure-data-engine** | Agentic AI infrastructure data engine | [github.com/AAH20/agentic-ai-infrastructure-data-engine](https://github.com/AAH20/agentic-ai-infrastructure-data-engine) |
-| **agentic-ai-threat-intelligence** | Agentic AI threat intelligence | [github.com/AAH20/agentic-ai-threat-intelligence](https://github.com/AAH20/agentic-ai-threat-intelligence) |
-| **agentic-cloud-solution-engineering-factory** | Agentic cloud solution engineering | [github.com/AAH20/agentic-cloud-solution-engineering-factory](https://github.com/AAH20/agentic-cloud-solution-engineering-factory) |
-| **agentproof-ai-security-scanner** | AgentProof AI security scanner | [github.com/AAH20/agentproof-ai-security-scanner](https://github.com/AAH20/agentproof-ai-security-scanner) |
-| **agentrelease-authority** | Agent release authority | [github.com/AAH20/agentrelease-authority](https://github.com/AAH20/agentrelease-authority) |
-| **ai-agent-identity-authorization-security** | AI agent identity & authorization | [github.com/AAH20/ai-agent-identity-authorization-security](https://github.com/AAH20/ai-agent-identity-authorization-security) |
-| **ai-agent-infrastructure-benchmark** | AI agent infrastructure benchmark | [github.com/AAH20/ai-agent-infrastructure-benchmark](https://github.com/AAH20/ai-agent-infrastructure-benchmark) |
-| **ai-agent-mcp-security-scorecard** | AI agent MCP security scorecard | [github.com/AAH20/ai-agent-mcp-security-scorecard](https://github.com/AAH20/ai-agent-mcp-security-scorecard) |
-| **ai-agent-reliability-resilience** | AI agent reliability engineering | [github.com/AAH20/ai-agent-reliability-resilience](https://github.com/AAH20/ai-agent-reliability-resilience) |
-| **ai-agent-runtime-gateway** | AI agent runtime gateway | [github.com/AAH20/ai-agent-runtime-gateway](https://github.com/AAH20/ai-agent-runtime-gateway) |
-| **ai-agent-sbom-security-scanner** | AI agent SBOM security scanner | [github.com/AAH20/ai-agent-sbom-security-scanner](https://github.com/AAH20/ai-agent-sbom-security-scanner) |
-| **ai-agent-security-telemetry-incident-response** | AI agent security telemetry | [github.com/AAH20/ai-agent-security-telemetry-incident-response](https://github.com/AAH20/ai-agent-security-telemetry-incident-response) |
-| **ai-agent-security-trust-center** | AI agent security trust center | [github.com/AAH20/ai-agent-security-trust-center](https://github.com/AAH20/ai-agent-security-trust-center) |
+    subgraph Cloud["Cloud & Security"]
+        ACC["ai-cloud-cost-optimization"]
+        KF["kubernetes-ai-finops"]
+        AS["agentproof-ai-security"]
+        VT["vuln-triage"]
+    end
 
-### Cloud & Infrastructure Projects
+    Platform --> ULL
+    ULL --> FinTech
+    ULL --> AIInfra
+    ULL --> Cloud
+```
 
-| Project | Description | GitHub |
-|---------|-------------|--------|
-| **ai-cloud-cost-optimization-platform** | AI cloud cost optimization | [github.com/AAH20/ai-cloud-cost-optimization-platform](https://github.com/AAH20/ai-cloud-cost-optimization-platform) |
-| **ai-cloud-infrastructure-code-review-platform** | AI cloud infrastructure code review | [github.com/AAH20/ai-cloud-infrastructure-code-review-platform](https://github.com/AAH20/ai-cloud-infrastructure-code-review-platform) |
-| **ai-continuous-compliance-evidence-reliability-platform** | AI continuous compliance | [github.com/AAH20/ai-continuous-compliance-evidence-reliability-platform](https://github.com/AAH20/ai-continuous-compliance-evidence-reliability-platform) |
-| **ai-governance-evidence-graph** | AI governance evidence graph | [github.com/AAH20/ai-governance-evidence-graph](https://github.com/AAH20/ai-governance-evidence-graph) |
-| **ai-grc-automation-benchmark** | AI GRC automation benchmark | [github.com/AAH20/ai-grc-automation-benchmark](https://github.com/AAH20/ai-grc-automation-benchmark) |
-| **ai-inference-price-performance-index** | AI inference price-performance | [github.com/AAH20/ai-inference-price-performance-index](https://github.com/AAH20/ai-inference-price-performance-index) |
-| **ai-infrastructure-procurement-platform** | AI infrastructure procurement | [github.com/AAH20/ai-infrastructure-procurement-platform](https://github.com/AAH20/ai-infrastructure-procurement-platform) |
-| **ai-infrastructure-pull-request-reviewer** | AI infrastructure PR reviewer | [github.com/AAH20/ai-infrastructure-pull-request-reviewer](https://github.com/AAH20/ai-infrastructure-pull-request-reviewer) |
-| **ai-native-internal-developer-platform** | AI-native internal developer platform | [github.com/AAH20/ai-native-internal-developer-platform](https://github.com/AAH20/ai-native-internal-developer-platform) |
-| **ai-ran-profitability-autopilot** | AI-RAN service profitability | [github.com/AAH20/ai-ran-profitability-autopilot](https://github.com/AAH20/ai-ran-profitability-autopilot) |
-| **ai-security-posture-management** | AI security posture management | [github.com/AAH20/ai-security-posture-management](https://github.com/AAH20/ai-security-posture-management) |
-| **aiops-observability-platform** | Agentic AIOps observability | [github.com/AAH20/aiops-observability-platform](https://github.com/AAH20/aiops-observability-platform) |
-| **autonomous-cloud-modernization-factory** | Autonomous cloud modernization | [github.com/AAH20/autonomous-cloud-modernization-factory](https://github.com/AAH20/autonomous-cloud-modernization-factory) |
-| **autoprod** | AutoProd | [github.com/AAH20/autoprod](https://github.com/AAH20/autoprod) |
-| **cloud-cost-optimization-github-action** | Cloud cost optimization GitHub Action | [github.com/AAH20/cloud-cost-optimization-github-action](https://github.com/AAH20/cloud-cost-optimization-github-action) |
-| **cloud-infrastructure-knowledge-graph** | Cloud infrastructure knowledge graph | [github.com/AAH20/cloud-infrastructure-knowledge-graph](https://github.com/AAH20/cloud-infrastructure-knowledge-graph) |
-| **cloud-resilience-disaster-recovery-platform** | Cloud disaster recovery | [github.com/AAH20/cloud-resilience-disaster-recovery-platform](https://github.com/AAH20/cloud-resilience-disaster-recovery-platform) |
-| **commerce-incident-network** | Commerce incident network | [github.com/AAH20/commerce-incident-network](https://github.com/AAH20/commerce-incident-network) |
-| **compoundcloud-ai-delivery-fabric** | CompoundCloud AI delivery | [github.com/AAH20/compoundcloud-ai-delivery-fabric](https://github.com/AAH20/compoundcloud-ai-delivery-fabric) |
-| **context-graph-compact** | Context graph compact | [github.com/AAH20/context-graph-compact](https://github.com/AAH20/context-graph-compact) |
-| **creative-evolution** | Creative evolution | [github.com/AAH20/creative-evolution](https://github.com/AAH20/creative-evolution) |
-| **cyborg-bench** | CyborgBench (Embodied-Eval) | [github.com/AAH20/cyborg-bench](https://github.com/AAH20/cyborg-bench) |
-| **cyborg-reflex** | Sub-millisecond bio-kinematic control | [github.com/AAH20/cyborg-reflex](https://github.com/AAH20/cyborg-reflex) |
-| **due-diligence-agents-work** | Due diligence agents | [github.com/AAH20/A2Z_due-diligence-agents](https://github.com/AAH20/A2Z_due-diligence-agents) |
-| **edge-vision-mesh** | Decentralized P2P edge-NPU multi-camera swarm | [github.com/AAH20/edge-vision-mesh](https://github.com/AAH20/edge-vision-mesh) |
-| **egypt-digital-trust-map** | Egypt digital trust map | [github.com/AAH20/egypt-digital-trust-map](https://github.com/AAH20/egypt-digital-trust-map) |
-| **enterprise-ai-integration-platform** | Enterprise AI integration | [github.com/AAH20/enterprise-ai-integration-platform](https://github.com/AAH20/enterprise-ai-integration-platform) |
-| **enterprise-ai-production-control-plane** | Enterprise AI production control | [github.com/AAH20/enterprise-ai-production-control-plane](https://github.com/AAH20/enterprise-ai-production-control-plane) |
-| **entity-continuity** | Entity continuity | [github.com/AAH20/entity-continuity](https://github.com/AAH20/entity-continuity) |
-| **eval-lake** | EvalLake (OpenAssurance-AI) | [github.com/AAH20/eval-lake](https://github.com/AAH20/eval-lake) |
-| **generative-plg** | Generative PLG | [github.com/AAH20/generative-plg](https://github.com/AAH20/generative-plg) |
-| **geo-engine** | Geo engine | [github.com/AAH20/geo-engine](https://github.com/AAH20/geo-engine) |
-| **ghost-fork** | Ghost fork | [github.com/AAH20/ghost-fork](https://github.com/AAH20/ghost-fork) |
-| **gpu-cloud-cost-calculator** | GPU cloud cost calculator | [github.com/AAH20/gpu-cloud-cost-calculator](https://github.com/AAH20/gpu-cloud-cost-calculator) |
-| **gpu-cluster-mesh** | GPU cluster mesh | [github.com/AAH20/gpu-cluster-mesh](https://github.com/AAH20/gpu-cluster-mesh) |
-| **gpu-inference-platform** | GPU inference platform | [github.com/AAH20/gpu-inference-platform](https://github.com/AAH20/gpu-inference-platform) |
-| **grc-automation-cyber-risk-quantification-platform** | GRC cyber risk quantification | [github.com/AAH20/grc-automation-cyber-risk-quantification-platform](https://github.com/AAH20/grc-automation-cyber-risk-quantification-platform) |
-| **identity-fabric-benchmarks** | Identity fabric benchmarks | [github.com/AAH20/identity-fabric-benchmarks](https://github.com/AAH20/identity-fabric-benchmarks) |
-| **intel-pulse** | Intel pulse | [github.com/AAH20/intel-pulse](https://github.com/AAH20/intel-pulse) |
-| **killchain-engine** | Killchain engine | [github.com/AAH20/killchain-engine](https://github.com/AAH20/killchain-engine) |
-| **kinetic-guard** | KineticGuard-RT (SafeVLA) | [github.com/AAH20/kinetic-guard](https://github.com/AAH20/kinetic-guard) |
-| **kubernetes-ai-agent-operator** | Kubernetes AI agent operator | [github.com/AAH20/kubernetes-ai-agent-operator](https://github.com/AAH20/kubernetes-ai-agent-operator) |
-| **kubernetes-ai-finops-autopilot** | Kubernetes AI FinOps autopilot | [github.com/AAH20/kubernetes-ai-finops-autopilot](https://github.com/AAH20/kubernetes-ai-finops-autopilot) |
-| **kubernetes-ai-sre-platform** | Kubernetes AI SRE platform | [github.com/AAH20/kubernetes-ai-sre-platform](https://github.com/AAH20/kubernetes-ai-sre-platform) |
-| **llm-inference-optimization-platform** | Multi-cloud AI inference | [github.com/AAH20/llm-inference-optimization-platform](https://github.com/AAH20/llm-inference-optimization-platform) |
-| **m&a-technology-integration-factory** | M&A technology integration | [github.com/AAH20/m-a-technology-integration-factory](https://github.com/AAH20/m-a-technology-integration-factory) |
-| **mcp-compatibility** | MCP compatibility | [github.com/AAH20/mcp-compatibility](https://github.com/AAH20/mcp-compatibility) |
-| **mcp-redteam** | MCP redteam | [github.com/AAH20/mcp-redteam](https://github.com/AAH20/mcp-redteam) |
-| **multi-cloud-finops-data-quality-platform** | Multi-cloud FinOps data quality | [github.com/AAH20/multi-cloud-finops-data-quality-platform](https://github.com/AAH20/multi-cloud-finops-data-quality-platform) |
-| **multicloud-infrastructure-control-loop** | Multi-cloud infrastructure control | [github.com/AAH20/multicloud-infrastructure-control-loop](https://github.com/AAH20/multicloud-infrastructure-control-loop) |
-| **narrative-surge** | Narrative surge | [github.com/AAH20/narrative-surge](https://github.com/AAH20/narrative-surge) |
-| **network-change-intelligence-twin** | Network change intelligence twin | [github.com/AAH20/network-change-intelligence-twin](https://github.com/AAH20/network-change-intelligence-twin) |
-| **neuro-manifold** | Non-stationary BCI neural drift inversion | [github.com/AAH20/neuro-manifold](https://github.com/AAH20/neuro-manifold) |
-| **neuro-spatial** | Neuromorphic event-camera engine | [github.com/AAH20/neuro-spatial](https://github.com/AAH20/neuro-spatial) |
-| **neuromuscular-pll** | Neuromuscular phase-locked loop | [github.com/AAH20/neuromuscular-pll](https://github.com/AAH20/neuromuscular-pll) |
-| **neurospark-rt** | NeuroSpark-RT | [github.com/AAH20/neurospark-rt](https://github.com/AAH20/neurospark-rt) |
-| **nvidia-ai-factory-deployment-automation** | NVIDIA AI factory deployment | [github.com/AAH20/nvidia-ai-factory-deployment-automation](https://github.com/AAH20/nvidia-ai-factory-deployment-automation) |
-| **nvidia-ai-factory-reliability-platform** | NVIDIA AI factory reliability | [github.com/AAH20/nvidia-ai-factory-reliability-platform](https://github.com/AAH20/nvidia-ai-factory-reliability-platform) |
-| **openai-to-vllm-nvidia-nim-migration** | OpenAI-to-vLLM migration | [github.com/AAH20/openai-to-vllm-nvidia-nim-migration](https://github.com/AAH20/openai-to-vllm-nvidia-nim-migration) |
-| **opentelemetry-ai-valueops-collector** | OpenTelemetry AI ValueOps | [github.com/AAH20/opentelemetry-ai-valueops-collector](https://github.com/AAH20/opentelemetry-ai-valueops-collector) |
-| **opentelemetry-infrastructure-graph-collector** | OpenTelemetry infrastructure graph | [github.com/AAH20/opentelemetry-infrastructure-graph-collector](https://github.com/AAH20/opentelemetry-infrastructure-graph-collector) |
-| **otel-agent-core** | OTEL agent core | [github.com/AAH20/otel-agent-core](https://github.com/AAH20/otel-agent-core) |
-| **physical-ai-governor** | Physical AI governor | [github.com/AAH20/physical-ai-governor](https://github.com/AAH20/physical-ai-governor) |
-| **pqattest** | Post-quantum attestation | [github.com/AAH20/pqattest](https://github.com/AAH20/pqattest) |
-| **pqc-enclave** | Post-quantum cryptographic enclave | [github.com/AAH20/pqc-enclave](https://github.com/AAH20/pqc-enclave) |
-| **python-sdk** | MCP Python SDK | [github.com/AAH20/python-sdk](https://github.com/AAH20/python-sdk) |
-| **real-time-ai-data-platform** | Real-time AI data platform | [github.com/AAH20/real-time-ai-data-platform](https://github.com/AAH20/real-time-ai-data-platform) |
-| **runproof** | RunProof | [github.com/AAH20/runproof](https://github.com/AAH20/runproof) |
-| **sap-s4hana-azure-ai-transformation-factory** | SAP S/4HANA Azure AI transformation | [github.com/AAH20/sap-s4hana-azure-ai-transformation-factory](https://github.com/AAH20/sap-s4hana-azure-ai-transformation-factory) |
-| **self-hosted-ai-agent-infrastructure-platform** | Self-hosted AI agent infrastructure | [github.com/AAH20/self-hosted-ai-agent-infrastructure-platform](https://github.com/AAH20/self-hosted-ai-agent-infrastructure-platform) |
-| **sky-sentinel** | Autonomous counter-UAS interceptor | [github.com/AAH20/sky-sentinel](https://github.com/AAH20/sky-sentinel) |
-| **supply-chain-digital-twin** | Supply chain digital twin | [github.com/AAH20/supply-chain-digital-twin](https://github.com/AAH20/supply-chain-digital-twin) |
-| **vdr-synthesizer** | VDR synthesizer | [github.com/AAH20/vdr-synthesizer](https://github.com/AAH20/vdr-synthesizer) |
-| **verified-effects-runtime** | Verified effects runtime | [github.com/AAH20/verified-effects-runtime](https://github.com/AAH20/verified-effects-runtime) |
-| **veritas-tee** | Confidential AI agent enclave | [github.com/AAH20/veritas-tee](https://github.com/AAH20/veritas-tee) |
-| **vibeguard** | Vibeguard | [github.com/AAH20/vibeguard](https://github.com/AAH20/vibeguard) |
-| **viral-cascade** | Viral cascade | [github.com/AAH20/viral-cascade](https://github.com/AAH20/viral-cascade) |
-| **vllm** | vLLM | [github.com/AAH20/vllm](https://github.com/AAH20/vllm) |
-| **vuln-triage** | Exploit-aware vulnerability triage | [github.com/AAH20/vuln-triage](https://github.com/AAH20/vuln-triage) |
-| **workflow-twin** | Workflow twin / agent cutover | [github.com/AAH20/workflow-twin](https://github.com/AAH20/workflow-twin) |
-| **worldops** | WorldOps | [github.com/AAH20/worldops](https://github.com/AAH20/worldops) |
-| **zero-shot-bci** | Zero-shot cross-subject BCI | [github.com/AAH20/zero-shot-bci](https://github.com/AAH20/zero-shot-bci) |
-| **zk-biometrics** | Zero-knowledge cancelable biometrics | [github.com/AAH20/zk-biometrics](https://github.com/AAH20/zk-biometrics) |
-| **zk-cleanroom** | ZK cleanroom | [github.com/AAH20/zk-cleanroom](https://github.com/AAH20/zk-cleanroom) |
+### 2.2 Apex_ULL Component Map
 
-### FinTech C2 Matrix
+```mermaid
+flowchart TD
+    subgraph Cpp["C++20 Components"]
+        FH["Feed Handler"]
+        ME["Matching Engine"]
+        OB["Order Book"]
+        SE["Signal Engine"]
+        RE["Risk Engine"]
+        OR["Order Router"]
+        MD["Market Data"]
+        CE["Compliance"]
+        CS["Clock Sync"]
+    end
 
-The **FinTech C2 (Command & Control) Matrix** is a comprehensive mapping of FinTech capabilities across the Apex ecosystem:
+    subgraph Network["Network Stack"]
+        DPDK["DPDK"]
+        RDMA["RDMA"]
+        TCP["TCP/UDP + io_uring"]
+        FIX["FIX Engine"]
+        SBE["SBE Decoder"]
+        ITCH["ITCH Decoder"]
+    end
+
+    subgraph Rust["Rust Components"]
+        RME["Matching Engine"]
+        ROB["Order Book"]
+        RSE["Signal Engine"]
+        RCE["Compliance"]
+        RCS["Clock Sync"]
+    end
+
+    subgraph Python["Python Kernels"]
+        SCH["Scheduling\nJSSP, FSSP, OSSP, RCPSP"]
+        PART["Partitioning\nBisection, K-Cut"]
+        ROUT["Routing\nMax-Flow, MST"]
+        EVAL["Evaluation\nML, SPC, Bayesian"]
+    end
+
+    Cpp --> Network
+    Rust --> Network
+    Python --> Cpp
+    Python --> Rust
+```
+
+### 2.3 Memory & Context Architecture
+
+```mermaid
+flowchart TD
+    subgraph Memory["Apex Memory Context"]
+        Cognee["Cognee\nGraph Memory\nEntity Resolution"]
+        Hindsight["Hindsight\nCross-Session\nMulti-Strategy Retrieval"]
+        Nerve["Nerve\nSupervision\nContext Governance\nDoD Enforcement"]
+        Laya["Laya\nFast Local Decisions\n~33ms, $0.00"]
+    end
+
+    subgraph GC["Memory Garbage Collection"]
+        TTL["TTL Eviction"]
+        LRU["LRU Demotion"]
+        LFU["LFU Removal"]
+        Staleness["Staleness Invalidation"]
+        Relevance["Relevance Scoring"]
+    end
+
+    subgraph Priority["Memory Prioritization"]
+        P0["P0: Critical\nAlways keep"]
+        P1["P1: High\nRecall on match"]
+        P2["P2: Medium\nRecall on strong match"]
+        P3["P3: Low\nArchive"]
+        P4["P4: Dead\nEvict"]
+    end
+
+    Memory --> GC
+    GC --> Priority
+```
+
+### 2.4 FinTech C2 Matrix
+
+The FinTech C2 (Command & Control) Matrix maps capabilities across the Apex ecosystem:
 
 | Layer | Capability | Projects |
 |-------|-----------|----------|
-| **Market Data** | Feed handlers, SBE/ITCH/Pillar decoders, real-time distribution | Apex_ULL, real-time-ai-data-platform |
-| **Order Management** | Order books, matching engines, execution algorithms | Apex_ULL |
-| **Risk Management** | Pre-trade risk, kill switches, circuit breakers, position limits | Apex_ULL, apex_infrastructure_killswitch_kernel |
-| **Compliance** | MiFID II, RTS 6/27/28, EMIR, CAT, market abuse detection | Apex_ULL, GRC_Claw |
-| **Network Infrastructure** | DPDK, RDMA, AF_XDP, kernel bypass, FPGA | Apex_ULL |
-| **Payments** | Real-time fraud detection, payment processing | real-time-payment-fraud-platform |
-| **Revenue Assurance** | Order-to-cash, revenue optimization | autonomous-order-to-cash-revenue-assurance, ai-factory-revenue-twin |
-| **Growth Analytics** | Marketing incrementality, churn prediction, portfolio growth | growth-decision-engine, churn-inversion, portfolio-growth-engine |
+| **Market Data** | Feed handlers, SBE/ITCH/Pillar decoders | Apex_ULL, real-time-ai-data-platform |
+| **Order Management** | Order books, matching engines | Apex_ULL |
+| **Risk Management** | Pre-trade risk, kill switches, circuit breakers | Apex_ULL, apex_infrastructure_killswitch_kernel |
+| **Compliance** | MiFID II, RTS 6/27/28, EMIR, CAT | Apex_ULL, GRC_Claw |
+| **Network Infrastructure** | DPDK, RDMA, AF_XDP, FPGA | Apex_ULL |
+| **Payments** | Real-time fraud detection | real-time-payment-fraud-platform |
+| **Revenue Assurance** | Order-to-cash, revenue optimization | autonomous-order-to-cash-revenue-assurance |
+| **Growth Analytics** | Marketing incrementality, churn, portfolio | growth-decision-engine, churn-inversion |
 | **Arbitrage** | Chronological arbitrage, RTB arbitrage | chrono-arbitrage, rtb-arbitrage |
-| **DeFi** | Bonding curves, decentralized finance | bonding-curve |
+| **DeFi** | Bonding curves | bonding-curve |
 | **Merchant** | Merchant profit optimization | merchant-profit-os |
-| **AI Infrastructure** | Multi-agent swarms, orchestration, governance | ApexGraphSwarm, agentic-graph-swarm-kernel, GRC_Claw |
-| **Cloud Infrastructure** | Multi-cloud FinOps, cost optimization, Kubernetes | ai-cloud-cost-optimization-platform, multi-cloud-finops-data-quality-platform |
-| **Security** | Zero trust, identity, SBOM, vulnerability management | agentproof-ai-security-scanner, ai-agent-sbom-security-scanner, vuln-triage |
-| **Observability** | AIOps, distributed tracing, metrics | aiops-observability-platform, opentelemetry-ai-valueops-collector |
-| **Neuromorphic** | BCI, neuromorphic computing, neural interfaces | neuro-manifold, neuro-spatial, neuromuscular-pll, neurospark-rt, zero-shot-bci |
-| **Post-Quantum** | PQC, zero-knowledge proofs, homomorphic encryption | pqc-enclave, pqattest, zk-biometrics, zk-cleanroom |
-| **Physical AI** | Embodied AI, robotics, counter-UAS | cyborg-bench, cyborg-reflex, kinetic-guard, sky-sentinel, physical-ai-governor |
-| **Edge AI** | Edge vision, edge NPU, decentralized P2P | edge-vision-mesh |
+| **AI Infrastructure** | Multi-agent swarms, orchestration | ApexGraphSwarm, GRC_Claw |
+| **Cloud Infrastructure** | Multi-cloud FinOps, cost optimization | ai-cloud-cost-optimization-platform |
+| **Security** | Zero trust, identity, SBOM | agentproof-ai-security-scanner |
+| **Observability** | AIOps, distributed tracing | aiops-observability-platform |
+| **Neuromorphic** | BCI, neuromorphic computing | neuro-manifold, neuro-spatial |
+| **Post-Quantum** | PQC, ZK proofs | pqc-enclave, zk-biometrics |
+| **Physical AI** | Embodied AI, robotics | cyborg-bench, sky-sentinel |
+| **Edge AI** | Edge vision, edge NPU | edge-vision-mesh |
+
+### 2.5 Standalone Mermaid Diagrams
+
+Open these in any browser for interactive dark-themed visualizations:
+
+| Diagram | File | Description |
+|---------|------|-------------|
+| **Apex Ecosystem** | [docs/mermaid/apex-ecosystem.html](docs/mermaid/apex-ecosystem.html) | Full ecosystem — 4 tabs: Platform Architecture, Ecosystem Map (120+ projects), Commercial Offering, FinTech C2 Matrix |
+| **Apex Platform** | [docs/mermaid/apex-platform-detailed.html](docs/mermaid/apex-platform-detailed.html) | Platform deep dive — 4 tabs: Platform Overview, Apex_ULL Deep Dive (C++20/Rust/Python), Memory & Context, Integration & APIs |
+
+**Design:** Dark theme (#07090e), limited color palette (cyan primary, subtle purple/emerald secondary), Plus Jakarta Sans + JetBrains Mono, glass cards, tab navigation, fully responsive, search/filter for projects.
 
 ---
 
@@ -269,14 +241,14 @@ The **FinTech C2 (Command & Control) Matrix** is a comprehensive mapping of FinT
 - **Multi-language** — C/C++ for hot paths, Rust for safety, Python for research
 - **6 queue topologies** — SPSC, MPSC, MPMC, SPMC, LMAX Disruptor, Vyukov bounded
 - **Production-grade security** — AES-128-GCM (180 ns), HMAC-SHA-256 (80 ns), static ACL (15 ns)
-- **Comprehensive benchmarks** — 6 categories, 20+ metrics, STAC-compliant
+- **Comprehensive benchmarks** — 10 categories, 20+ metrics, STAC-compliant
 - **Evaluation frameworks** — Statistical ML, determinism scoring, cost modeling, security overhead
 
 ---
 
-## 3. Benchmark Results
+## 4. Benchmark Results
 
-### 3.1 Latency Hierarchy
+### 4.1 Latency Hierarchy
 
 | Tier | Latency | Example | Determinism (CV) |
 |------|---------|---------|-------------------|
@@ -289,7 +261,7 @@ The **FinTech C2 (Command & Control) Matrix** is a comprehensive mapping of FinT
 | Cross-host (same DC) | 5–20 µs | DPDK loopback, SPDK | 0.05–0.15 |
 | Cross-region | 40–300 ms | Fiber, microwave, internet | 0.10–0.50 |
 
-### 3.2 Tick-to-Trade Latency
+### 4.2 Tick-to-Trade Latency
 
 | Implementation | Typical Latency | Jitter | Use Case |
 |---------------|----------------|--------|----------|
@@ -299,7 +271,7 @@ The **FinTech C2 (Command & Control) Matrix** is a comprehensive mapping of FinT
 | Full FPGA tick-to-trade | 150–500 ns | Very low, deterministic | Simple, well-defined hot path |
 | Fastest published wire-to-wire | <25 ns | Ultra-low | Research benchmarks |
 
-### 3.3 Network Benchmarks
+### 4.3 Network Benchmarks
 
 | Technology | Latency | Throughput | Jitter |
 |-----------|---------|------------|--------|
@@ -310,7 +282,7 @@ The **FinTech C2 (Command & Control) Matrix** is a comprehensive mapping of FinT
 | P4 switch pipeline | 100–500 ns | 6.5–12.8 Tb/s | Very low |
 | Optical switch (SOA) | ~40 ns | 25–100 Gb/s/port | Negligible |
 
-### 3.4 Queue Kernel Benchmarks
+### 4.4 Queue Kernel Benchmarks
 
 | Configuration | Throughput | p99 Latency | Notes |
 |--------------|------------|-------------|-------|
@@ -319,7 +291,7 @@ The **FinTech C2 (Command & Control) Matrix** is a comprehensive mapping of FinT
 | MPMC under 2P/2C contention | 0.5M ops/s | >1 µs | CAS retry bottleneck |
 | Python wrapper | — | 541 ns | 1,000× overhead vs C |
 
-### 3.5 Payment Network Benchmarks
+### 4.5 Payment Network Benchmarks
 
 | Network | Latency | Peak TPS | Availability |
 |---------|---------|----------|--------------|
@@ -328,7 +300,7 @@ The **FinTech C2 (Command & Control) Matrix** is a comprehensive mapping of FinT
 | Square | <287 ms p99 | 47,000 | 99.99% |
 | Visa | <1 second | 83,000 msg/sec | 99.9999% |
 
-### 3.6 Security Overhead Benchmarks
+### 4.6 Security Overhead Benchmarks
 
 | Mechanism | Per-Operation Overhead | ULL Suitability |
 |-----------|----------------------|-----------------|
@@ -338,7 +310,7 @@ The **FinTech C2 (Command & Control) Matrix** is a comprehensive mapping of FinT
 | RBAC (in-memory) | 80 ns | Excellent |
 | Audit (async ring buffer) | 80 ns | Excellent |
 
-### 3.7 STAC Benchmark Suite
+### 4.7 STAC Benchmark Suite
 
 | ID | Name | Description | Reference p50 |
 |----|------|-------------|---------------|
@@ -349,7 +321,7 @@ The **FinTech C2 (Command & Control) Matrix** is a comprehensive mapping of FinT
 | STAC-T0 | Network I/O | Packet send/receive latency | 1,000 ns |
 | STAC-T1 | Tick-to-Trade | End-to-end tick to order send | 500 ns |
 
-### 3.8 Determinism Benchmarks
+### 4.8 Determinism Benchmarks
 
 | Tier | CV | p99/p50 | Max Latency | Jitter σ |
 |------|-----|---------|-------------|----------|
@@ -357,51 +329,6 @@ The **FinTech C2 (Command & Control) Matrix** is a comprehensive mapping of FinT
 | FPGA feed handler + CPU strategy | < 0.05 | < 2.0 | < 5 µs | < 50 ns |
 | Kernel bypass (DPDK/Onload) | < 0.10 | < 3.0 | < 20 µs | < 200 ns |
 | Standard kernel stack | < 0.30 | < 10.0 | < 100 µs | < 1 µs |
-
----
-
-## 4. Architecture
-
-### 4.1 HFT Consensus Architecture
-
-The canonical ULL trading system is a three-layer stack:
-
-- **FPGA Layer (nanoseconds):** Market data decoding (FIX/FAST/ITCH), order book updates, pre-trade risk checks, order encoding. FPGAs provide *determinism*, not just speed — the same work in the same number of cycles every time.
-- **CPU Layer (microseconds):** Strategy logic, parameter updates, position tracking, P&L calculation.
-- **Research Layer (milliseconds to seconds):** Python/R for model development, Kdb+ for tick database, ML inference on GPU clusters.
-
-### 4.2 Kernel Bypass Stack
-
-The kernel bypass architecture eliminates OS overhead on the hot path: `NIC (DPDK/Onload) ↔ DMA ↔ User-Space PMD Driver (no kernel) ↔ Application Logic`. This removes context switches, interrupts, and kernel overhead — the dominant sources of latency in standard networking.
-
-### 4.3 Network Stack Architecture
-
-The custom network stack is layered: Application → NetStack (multi-port, global stats) → NetPort (per-NIC buffer pool, queue pairs) → NetQP (per-connection TX/RX rings, state machine) → NetRing/NetCQ (lock-free SPSC primitives) → NetBufPool (hugepage-backed, zero-copy).
-
-### 4.4 Feed Handler Pipeline
-
-```
-NIC RX (DPDK) → SPSC ring → Parser → SPSC ring → Strategy callback
-```
-
-### 4.5 DPU/SmartNIC Offload
-
-| DPU | ARM Cores | Network | Packet Rate | Power |
-|-----|-----------|---------|-------------|-------|
-| NVIDIA BlueField-3 | 16× A78AE | 400 Gb/s | 80 Mpps | 75–150 W |
-| Intel IPU E2100 | 16× N1 | 200 Gb/s | 200 Mpps | 20–30 W |
-| AMD Pensando Salina | 16× N1 | 400 Gb/s | 117 Mpps | ~50 W |
-
-### 4.6 FPGA Technology Coverage
-
-| Vendor | Process | Max LUTs | SerDes | Power | Latency |
-|--------|---------|----------|--------|-------|---------|
-| AMD Versal AI Edge | 7nm | 520K | 32G | 15–75W | Sub-µs |
-| Intel Agilex 7 | 10nm SuperFin | 2.7M LE | 116G | 10–100W+ | Sub-µs |
-| Lattice Nexus | 28nm FD-SOI | 397K | 16G | <1W–5W | <500ns |
-| Microchip PolarFire | 28nm NV | 481K | 12.7G | 3.5W | Sub-µs |
-| Achronix Speedster7t | 7nm | 692K | 112G | 50–150W+ | Sub-µs |
-| Flex Logix eFPGA | 12–40nm | 122K+ | None | 5–10× lower | 1–2 cycles |
 
 ---
 
@@ -657,124 +584,7 @@ python benchmarks/stac/run_all.py --output results.json --save-baseline  # Save 
 
 ---
 
-## 9. Commercial Offering
-
-Apex_ULL is part of the **Apex Platform** — a unified commercial layer that connects all of Ahmed Hassan's open-source projects into a coherent offering.
-
-### Apex Platform Tiers
-
-| Tier | Price | Features |
-|------|-------|----------|
-| **Free** | $0 | All OSS projects, community support, self-service docs |
-| **Professional** | $99/mo | + Pre-built workflows, + Priority support, + CI/CD templates |
-| **Enterprise** | $999/mo | + Custom development, + SLA (99.9%), + Dedicated support, + Private repos |
-| **Custom** | Contact | + White-label, + OEM licensing, + On-prem deployment, + Training |
-
-### Apex Platform Architecture
-
-```mermaid
-flowchart TD
-    subgraph Commercial["Apex Platform — Commercial Layer"]
-        Free["Free Tier\nAll OSS Projects"]
-        Pro["Professional\n$99/mo"]
-        Ent["Enterprise\n$999/mo"]
-        Custom["Custom\nContact"]
-    end
-
-    subgraph Core["Apex_ULL — Ultra-Low Latency"]
-        CPP["C++20\nFeed Handler, Matching\nOrder Book, Risk"]
-        Rust["Rust\nMatching, Order Book\nSignal, Compliance"]
-        Python["Python Kernels\nScheduling, Partitioning\nRouting, Evaluation"]
-    end
-
-    subgraph Ecosystem["Apex Ecosystem"]
-        AGS["ApexGraphSwarm\nGraph Intelligence"]
-        GRC["GRC_Claw\nISO 42001 Governance"]
-        DCC["Data Center Commander\nDC Lifecycle"]
-        MC["Apex Memory Context\nCognee + Nerve + Laya"]
-    end
-
-    subgraph FinTech["FinTech Projects"]
-        CA["chrono-arbitrage"]
-        RTB["rtb-arbitrage"]
-        BC["bonding-curve"]
-        PP["real-time-payment-fraud"]
-        MPO["merchant-profit-os"]
-        PGE["portfolio-growth-engine"]
-    end
-
-    subgraph Infra["AI Infrastructure"]
-        HA["hyper-agent-os"]
-        SS["swarm-substrate"]
-        AIK["agent-immune-kernel"]
-        ATF["agent-trust-fabric"]
-    end
-
-    subgraph Cloud["Cloud & Security"]
-        ACC["ai-cloud-cost-optimization"]
-        KF["kubernetes-ai-finops"]
-        AS["agentproof-ai-security"]
-        VT["vuln-triage"]
-    end
-
-    Free --> Pro --> Ent --> Custom
-    Pro --> Core
-    Ent --> Core
-    Custom --> Core
-    Core --> Ecosystem
-    Ecosystem --> FinTech
-    Ecosystem --> Infra
-    Ecosystem --> Cloud
-```
-
-### Go-to-Market Motion
-
-| Component | Details |
-|-----------|---------|
-| **Squads** | 12 specialized teams |
-| **Agent Slots** | 330 parallel agents |
-| **Channel** | Broker distribution |
-| **Domain** | a2zsoc.com |
-| **Revenue Target** | ~$30K MRR |
-
-### Standalone Mermaid Diagrams
-
-Open these in any browser for interactive dark-themed visualizations:
-
-| Diagram | File | Description |
-|---------|------|-------------|
-| **Apex Ecosystem** | [docs/mermaid/apex-ecosystem.html](docs/mermaid/apex-ecosystem.html) | Full ecosystem — 4 tabs: Platform Architecture, Ecosystem Map (120+ projects), Commercial Offering, FinTech C2 Matrix |
-| **Apex Platform** | [docs/mermaid/apex-platform-detailed.html](docs/mermaid/apex-platform-detailed.html) | Platform deep dive — 4 tabs: Platform Overview, Apex_ULL Deep Dive (C++20/Rust/Python), Memory & Context, Integration & APIs |
-
-**Design:** Dark theme (#07090e), limited color palette (cyan primary, subtle purple/emerald secondary), Plus Jakarta Sans + JetBrains Mono, glass cards, tab navigation, fully responsive, search/filter for projects.
-
-### FinTech C2 Matrix
-
-| Layer | Capability | Projects |
-|-------|-----------|----------|
-| **Market Data** | Feed handlers, SBE/ITCH/Pillar decoders | Apex_ULL, real-time-ai-data-platform |
-| **Order Management** | Order books, matching engines | Apex_ULL |
-| **Risk Management** | Pre-trade risk, kill switches, circuit breakers | Apex_ULL, apex_infrastructure_killswitch_kernel |
-| **Compliance** | MiFID II, RTS 6/27/28, EMIR, CAT | Apex_ULL, GRC_Claw |
-| **Network Infrastructure** | DPDK, RDMA, AF_XDP, FPGA | Apex_ULL |
-| **Payments** | Real-time fraud detection | real-time-payment-fraud-platform |
-| **Revenue Assurance** | Order-to-cash, revenue optimization | autonomous-order-to-cash-revenue-assurance |
-| **Growth Analytics** | Marketing incrementality, churn, portfolio | growth-decision-engine, churn-inversion |
-| **Arbitrage** | Chronological arbitrage, RTB arbitrage | chrono-arbitrage, rtb-arbitrage |
-| **DeFi** | Bonding curves | bonding-curve |
-| **Merchant** | Merchant profit optimization | merchant-profit-os |
-| **AI Infrastructure** | Multi-agent swarms, orchestration | ApexGraphSwarm, GRC_Claw |
-| **Cloud Infrastructure** | Multi-cloud FinOps, cost optimization | ai-cloud-cost-optimization-platform |
-| **Security** | Zero trust, identity, SBOM | agentproof-ai-security-scanner |
-| **Observability** | AIOps, distributed tracing | aiops-observability-platform |
-| **Neuromorphic** | BCI, neuromorphic computing | neuro-manifold, neuro-spatial |
-| **Post-Quantum** | PQC, ZK proofs | pqc-enclave, zk-biometrics |
-| **Physical AI** | Embodied AI, robotics | cyborg-bench, sky-sentinel |
-| **Edge AI** | Edge vision, edge NPU | edge-vision-mesh |
-
----
-
-## 10. License
+## 9. License
 
 **GNU Affero General Public License v3.0 (AGPL-3.0)**
 
@@ -786,7 +596,7 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 
 You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-The full license text is in the [LICENSE](LICENSE) file.
+The full license text is in the [LICENSE](LICENSE) file. Attribution requirements are in the [NOTICE](NOTICE) file.
 
 **Key AGPL-3.0 provisions:**
 - Source code must be provided to users who interact with the software over a network
