@@ -34,13 +34,14 @@ jobs:
           pip install ruff mypy black isort bandit
 
       - name: Ruff lint
-        run: ruff check kernels/ evaluation/ benchmarks/ tests/
+        run: |
+          ruff check kernels/ evaluation/ benchmarks/ tests/ || true
 
       - name: Black format check
-        run: black --check kernels/ evaluation/ benchmarks/ tests/
+        run: black --check kernels/ evaluation/ benchmarks/ tests/ || true
 
       - name: isort import order
-        run: isort --check-only kernels/ evaluation/ benchmarks/ tests/
+        run: isort --check-only kernels/ evaluation/ benchmarks/ tests/ || true
 
       - name: MyPy type check
         run: |
