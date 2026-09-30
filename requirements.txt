@@ -1,0 +1,33 @@
+# Apex_ULL Python Dependencies
+# Used by CI/CD workflows for testing, benchmarking, and linting
+
+# Core scientific computing
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-benchmark>=4.0.0
+hypothesis>=6.82.0
+
+# Linting & Formatting
+ruff>=0.1.0
+black>=23.7.0
+isort>=5.12.0
+mypy>=1.5.0
+types-all>=1.0.0
+
+# Security
+bandit>=1.7.5
+pip-audit>=2.6.0
+
+# Build
+build>=0.10.0
+setuptools>=68.0.0
+wheel>=0.41.0
+
+# Documentation
+mkdocs>=1.5.0
+mkdocs-material>=9.2.0
+markdownlint-cli>=0.35.0
