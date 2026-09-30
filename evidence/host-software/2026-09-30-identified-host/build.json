@@ -1,0 +1,17 @@
+{
+  "compiler_version": "Apple clang version 16.0.0 (clang-1600.0.26.6)",
+  "flags": [
+    "-std=c11",
+    "-D_POSIX_C_SOURCE=200809L",
+    "-O2",
+    "-pthread",
+    "-isysroot",
+    "MacOSX15.2.sdk"
+  ],
+  "sources": {
+    "benchmarks/native_queue_probe.c": "9852db6bb264739bd8f71efb34d8b55547db900dcd21c10d1d54919885e965e2",
+    "kernels/queue/queue.c": "0374c6cb9e4e5b15e71dbc2be686db711b6ebf06f6a92f37ed7effd6afc43274",
+    "kernels/queue/queue.h": "5d77492ad2d8b6c51a27b046ee1990a9917a29fabfc43ae0a9fc665e1b1545c6"
+  },
+  "executable_sha256": "76c1fadd566442f3bf8d41af7a63db600f5086d2e2c5f3955bb68c82c8d37b78"
+}

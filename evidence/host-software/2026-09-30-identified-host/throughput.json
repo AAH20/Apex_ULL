@@ -1,0 +1,5 @@
+{
+  "elapsed_ns": 40195000,
+  "completed_count": 10000,
+  "population": "completed batches of 1024 sequential in-memory SPSC round trips"
+}

@@ -89,3 +89,5 @@ Editable [Mermaid source](docs/ecosystem.mmd). Solid evidence edges identify imp
 ## Retained host evidence
 
 [2026-09-30 run](evidence/host-software/2026-09-30/run.json) retains 10,000 chronological batch samples and hashed workload, input, configuration, build, clock, schedule and throughput accounting. The measured source commit is recorded in the manifest. Each batch contains 1,024 single-thread in-memory round trips; these are not individual-operation tails or tick-to-trade measurements. Validate locally with `apex-atlas validate evidence/host-software/2026-09-30/run.json`.
+
+A second [identified-host observation](evidence/host-software/2026-09-30-identified-host/run.json) records Apple M3 hardware, 4,000 ns p50 and 7,000 ns p99 **per batch of 1,024 round trips** over 10,000 samples. The CPU and power policy were uncontrolled and the clock was uncalibrated; this is a reproduction example, not a comparative record. The first observation explicitly records an unknown CPU and Atlas excludes it from measured comparison eligibility.

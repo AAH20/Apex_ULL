@@ -1,0 +1,5 @@
+{
+  "name": "CLOCK_MONOTONIC",
+  "declared_resolution_ns": 1000,
+  "calibrated_uncertainty_ns": null
+}
