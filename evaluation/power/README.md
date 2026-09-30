@@ -25,7 +25,7 @@ This framework standardises power evaluation for ultra-low-latency (ULL) infrast
 
 | Dimension | Unit | Question Answered |
 |-----------|------|-------------------|
-| **Watts per Operation** | W/op | How much power per computational operation? |
+| **Energy per Operation** | J/op | How much power per computational operation? |
 | **Watts per Message** | W/msg | How much power per network message? |
 | **Energy Efficiency** | ops/J or msg/J | How many operations per joule? |
 | **Carbon Footprint** | gCO₂e/op | What is the carbon cost per operation? |
@@ -42,10 +42,10 @@ This framework standardises power evaluation for ultra-low-latency (ULL) infrast
 
 ## Metrics & Definitions
 
-### Watts per Operation (W/op)
+### Energy per Operation (J/op)
 
 ```
-W/op = Total System Power (W) / Operations per Second (ops/s)
+J/op = Total System Power (W) / Operations per Second (ops/s)
 ```
 
 **Operation types:**
@@ -196,9 +196,9 @@ ipmitool sensor list | grep -i watts
 
 ## Industry Averages
 
-### Watts per Operation by Platform
+### Energy per Operation by Platform
 
-| Platform | ops/s | Power (W) | W/op | ops/J | Source |
+| Platform | ops/s | Power (W) | J/op | ops/J | Source |
 |----------|-------|-----------|------|-------|--------|
 | **FPGA (Lattice Nexus)** | 100M LUT ops/s | 2W | 20 pJ/op | 50 G ops/J | Lattice |
 | **FPGA (PolarFire)** | 50M LUT ops/s | 3.5W | 70 pJ/op | 14 G ops/J | Microchip |
@@ -322,7 +322,7 @@ result = eval.watts_per_operation(
     pue=1.3,
     carbon_intensity=450
 )
-print(f"W/op: {result['watts_per_operation']:.2e} W/op")
+print(f"J/op: {result['watts_per_operation']:.2e} J/op")
 print(f"Carbon/op: {result['carbon_per_operation']:.2e} gCO₂e/op")
 
 # Calculate watts per message

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <stdexcept>
 
 namespace feed_handler {
 
@@ -14,6 +15,8 @@ FeedHandler::~FeedHandler() {
 }
 
 bool FeedHandler::initialize() {
+    if (config_.rx_burst_size == 0 || config_.rx_burst_size > 256 ||
+        config_.ring_size == 0 || config_.parser_queue_size == 0) return false;
     // Create DPDK port.
     port_ = create_dpdk_port(config_.use_dpdk_stub);
     if (!port_) return false;
@@ -27,7 +30,7 @@ bool FeedHandler::initialize() {
 
     // Create SPSC rings.
     rx_ring_ = std::make_unique<SpscRing<DpdkPort::Packet>>(config_.ring_size);
-    msg_ring_ = std::make_unique<SpscRing<MarketDataMessage>>(config_.parser_queue_size);
+    msg_ring_ = std::make_unique<SpscRing<QueuedMessage>>(config_.parser_queue_size);
 
     return true;
 }
@@ -53,7 +56,9 @@ void FeedHandler::stop() {
 }
 
 void FeedHandler::set_callback(MessageCallback cb) {
+    if (running_) throw std::logic_error("callback changes require a stopped handler");
     callback_ = std::move(cb);
+    if (msg_ring_) forward_messages();
 }
 
 FeedHandlerStats FeedHandler::get_stats() const {
@@ -64,6 +69,7 @@ FeedHandlerStats FeedHandler::get_stats() const {
     stats.messages_forwarded = messages_forwarded_.load(std::memory_order_relaxed);
     stats.parse_errors = parse_errors_.load(std::memory_order_relaxed);
     stats.ring_full_events = ring_full_events_.load(std::memory_order_relaxed);
+    stats.latency_samples = latency_samples_.load(std::memory_order_relaxed);
     stats.total_latency_nanos = total_latency_nanos_.load(std::memory_order_relaxed);
     stats.min_latency_nanos = min_latency_nanos_.load(std::memory_order_relaxed);
     stats.max_latency_nanos = max_latency_nanos_.load(std::memory_order_relaxed);
@@ -89,26 +95,25 @@ std::size_t FeedHandler::process_packet(std::span<const uint8_t> packet_data,
         ++messages_parsed_;
         ++count;
 
-        // Update latency stats.
-        const auto now = static_cast<uint64_t>(
-            std::chrono::steady_clock::now().time_since_epoch().count());
-        const auto latency = (now > rx_timestamp) ? (now - rx_timestamp) : 0;
-        total_latency_nanos_.fetch_add(latency, std::memory_order_relaxed);
-
-        // Update min/max.
-        auto prev_min = min_latency_nanos_.load(std::memory_order_relaxed);
-        while (latency < prev_min &&
-               !min_latency_nanos_.compare_exchange_weak(prev_min, latency)) {}
-        auto prev_max = max_latency_nanos_.load(std::memory_order_relaxed);
-        while (latency > prev_max &&
-               !max_latency_nanos_.compare_exchange_weak(prev_max, latency)) {}
+        // Only comparable steady-clock timestamps qualify; zero means unavailable.
+        const auto now = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+        if (config_.rx_timestamps_are_monotonic && rx_timestamp != 0 && now >= rx_timestamp) {
+            const auto latency = now - rx_timestamp;
+            latency_samples_.fetch_add(1, std::memory_order_relaxed);
+            total_latency_nanos_.fetch_add(latency, std::memory_order_relaxed);
+            auto prev_min = min_latency_nanos_.load(std::memory_order_relaxed);
+            while (latency < prev_min && !min_latency_nanos_.compare_exchange_weak(prev_min, latency)) {}
+            auto prev_max = max_latency_nanos_.load(std::memory_order_relaxed);
+            while (latency > prev_max && !max_latency_nanos_.compare_exchange_weak(prev_max, latency)) {}
+        }
 
         // Forward to callback or push to message ring.
         if (callback_) {
             callback_(msg, rx_timestamp);
             ++messages_forwarded_;
         } else {
-            if (!msg_ring_->push(std::move(msg))) {
+            if (!msg_ring_->push(QueuedMessage{std::move(msg), rx_timestamp})) {
                 ++ring_full_events_;
             }
         }
@@ -146,11 +151,8 @@ void FeedHandler::processing_loop() {
 void FeedHandler::forward_messages() {
     if (!callback_) return;
 
-    MarketDataMessage msg;
-    while (msg_ring_->pop().has_value()) {
-        // Note: we lose the original timestamp here; in production
-        // the timestamp would be stored alongside the message.
-        callback_(msg, 0);
+    while (auto queued = msg_ring_->pop()) {
+        callback_(queued->message, queued->rx_timestamp);
         ++messages_forwarded_;
     }
 }

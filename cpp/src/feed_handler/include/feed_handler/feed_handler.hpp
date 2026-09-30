@@ -20,6 +20,7 @@ struct FeedHandlerConfig {
     std::size_t ring_size = 65536;           // Must be power of 2.
     std::size_t rx_burst_size = 32;          // Max packets per RX burst.
     std::size_t parser_queue_size = 16384;   // Parsed message queue.
+    bool rx_timestamps_are_monotonic = false; // Must share steady_clock nanosecond epoch.
     bool use_dpdk_stub = true;               // Use stub for dev/test.
     std::string dpdk_port_name = "eth0";
     std::size_t dpdk_rx_desc = 4096;
@@ -34,6 +35,7 @@ struct FeedHandlerStats {
     uint64_t messages_forwarded = 0;
     uint64_t parse_errors = 0;
     uint64_t ring_full_events = 0;
+    uint64_t latency_samples = 0;
     uint64_t total_latency_nanos = 0;  // Sum for averaging.
     uint64_t min_latency_nanos = UINT64_MAX;
     uint64_t max_latency_nanos = 0;
@@ -65,7 +67,7 @@ public:
     /// Stop processing.
     void stop();
 
-    /// Set the callback for parsed messages.
+    /// Set the callback and drain queued messages. Only while stopped.
     void set_callback(MessageCallback cb);
 
     /// Get current statistics.
@@ -88,7 +90,8 @@ private:
 
     // SPSC rings for the pipeline.
     std::unique_ptr<SpscRing<DpdkPort::Packet>> rx_ring_;
-    std::unique_ptr<SpscRing<MarketDataMessage>> msg_ring_;
+    struct QueuedMessage { MarketDataMessage message; uint64_t rx_timestamp; };
+    std::unique_ptr<SpscRing<QueuedMessage>> msg_ring_;
 
     // Callback for parsed messages.
     MessageCallback callback_;
@@ -104,6 +107,7 @@ private:
     alignas(64) mutable std::atomic<uint64_t> messages_forwarded_{0};
     alignas(64) mutable std::atomic<uint64_t> parse_errors_{0};
     alignas(64) mutable std::atomic<uint64_t> ring_full_events_{0};
+    alignas(64) mutable std::atomic<uint64_t> latency_samples_{0};
     alignas(64) mutable std::atomic<uint64_t> total_latency_nanos_{0};
     alignas(64) mutable std::atomic<uint64_t> min_latency_nanos_{UINT64_MAX};
     alignas(64) mutable std::atomic<uint64_t> max_latency_nanos_{0};

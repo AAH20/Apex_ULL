@@ -142,7 +142,7 @@ class PowerEvaluator:
         carbon_intensity: Optional[float] = None,
     ) -> PowerResult:
         """
-        Calculate watts per operation.
+        Calculate joules per operation (legacy method name retained).
 
         Args:
             power_watts: Device/board power draw in watts
@@ -163,9 +163,9 @@ class PowerEvaluator:
         carbon_per_op = self._carbon_per_unit(energy_per_op, ci)
 
         return PowerResult(
-            metric="watts_per_operation",
+            metric="energy_per_operation",
             value=w_per_op,
-            unit="W/op",
+            unit="J/op",
             power_watts=total_power,
             throughput=operations_per_second,
             throughput_unit="ops/s",

@@ -92,7 +92,7 @@ def compute_latency_stats(samples_ns: list[int]) -> LatencyStats:
     # Jitter: mean absolute difference between consecutive samples
     jitter = 0.0
     if n > 1:
-        diffs = [abs(sorted_s[i] - sorted_s[i - 1]) for i in range(1, n)]
+        diffs = [abs(samples_ns[i] - samples_ns[i - 1]) for i in range(1, n)]
         jitter = statistics.fmean(diffs)
 
     # Coefficient of variation
@@ -367,6 +367,8 @@ def run_benchmark(
     Returns:
         BenchmarkResult with latency stats, throughput, and score
     """
+    if iterations <= 0 or warmup_iterations < 0:
+        raise ValueError("iterations must be positive and warmup nonnegative")
     # Warmup
     for _ in range(warmup_iterations):
         fn()
@@ -396,7 +398,7 @@ def run_benchmark(
         score = scoring_fn(stats, iterations, duration_s)
 
     return BenchmarkResult(
-        name=name,
+        name="APEX-SYNTHETIC-" + name.removeprefix("STAC-") if name.startswith("STAC-") else name,
         version=version,
         description=description,
         duration_s=duration_s,
@@ -405,7 +407,7 @@ def run_benchmark(
         latency=stats,
         score=score,
         score_breakdown=score_breakdown,
-        metadata=metadata or {},
+        metadata={**(metadata or {}), "benchmark_authority": "unofficial_synthetic", "official_stac_result": False},
         histogram=histogram,
     )
 

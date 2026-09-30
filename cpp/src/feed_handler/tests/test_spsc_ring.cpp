@@ -126,3 +126,32 @@ TEST(SpscRingTest, SingleProducerSingleConsumer) {
     producer.join();
     consumer.join();
 }
+
+namespace {
+struct LifetimeProbe {
+    static inline int alive = 0;
+    int value;
+    explicit LifetimeProbe(int v) noexcept : value(v) { ++alive; }
+    LifetimeProbe(LifetimeProbe&& other) noexcept : value(other.value) { ++alive; }
+    LifetimeProbe(const LifetimeProbe& other) noexcept : value(other.value) { ++alive; }
+    LifetimeProbe& operator=(const LifetimeProbe&) = delete;
+    ~LifetimeProbe() noexcept { --alive; }
+};
+}
+TEST(SpscRingRegression, ConstructsAndDestroysNonAssignableElements) {
+    EXPECT_EQ(LifetimeProbe::alive, 0);
+    {
+        feed_handler::SpscRing<LifetimeProbe> ring(2);
+        ASSERT_TRUE(ring.push(LifetimeProbe{7}));
+        ASSERT_TRUE(ring.push(LifetimeProbe{8}));
+        EXPECT_EQ(LifetimeProbe::alive, 2);
+        auto item = ring.pop();
+        ASSERT_TRUE(item);
+        EXPECT_EQ(item->value, 7);
+        EXPECT_EQ(LifetimeProbe::alive, 2);
+    }
+    EXPECT_EQ(LifetimeProbe::alive, 0);
+}
+TEST(SpscRingRegression, RejectsZeroCapacity) {
+    EXPECT_THROW(feed_handler::SpscRing<int> ring(0), std::invalid_argument);
+}

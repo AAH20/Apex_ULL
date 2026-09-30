@@ -21,7 +21,9 @@ _LIB_PATH = _LIB_DIR / "libqueue.so"
 
 def _build_lib() -> None:
     """Compile the C queue library if not already built."""
-    if _LIB_PATH.exists():
+    if _LIB_PATH.exists() and _LIB_PATH.stat().st_mtime >= max(
+        (_LIB_DIR / "queue.c").stat().st_mtime, (_LIB_DIR / "queue.h").stat().st_mtime
+    ):
         return
     src = _LIB_DIR / "queue.c"
     hdr = _LIB_DIR / "queue.h"
@@ -29,7 +31,7 @@ def _build_lib() -> None:
         raise RuntimeError(f"queue.c or queue.h not found in {_LIB_DIR}")
 
     cmd = [
-        "clang", "-O3", "-march=native", "-shared", "-fPIC",
+        os.environ.get("CC", "clang"), "-std=c11", "-pthread", "-O3", "-march=native", "-shared", "-fPIC",
         "-o", str(_LIB_PATH), str(src),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -40,6 +42,15 @@ def _build_lib() -> None:
 _build_lib()
 
 _lib = ctypes.CDLL(str(_LIB_PATH))
+_lib.queue_storage_size.argtypes = [ctypes.c_uint]
+_lib.queue_storage_size.restype = ctypes.c_size_t
+
+
+def _aligned_storage(size):
+    backing = ctypes.create_string_buffer(size + 63)
+    pointer = ctypes.c_void_p((ctypes.addressof(backing) + 63) & ~63)
+    return backing, pointer
+
 
 # ================================================================== #
 # ctypes type signatures                                              #
@@ -125,11 +136,10 @@ _lib.ull_now_ns_export.restype = ctypes.c_uint64
 # ================================================================== #
 
 class SPSCQueue:
-    """Single Producer Single Consumer lock-free ring buffer."""
+    """Single Producer Single Consumer bounded atomic ring buffer."""
 
     def __init__(self, capacity: int = 1024):
-        self._buf = ctypes.create_string_buffer(ctypes.sizeof(ctypes.c_void_p) * 8 + 256)
-        self._q = ctypes.cast(self._buf, ctypes.c_void_p)
+        self._buf, self._q = _aligned_storage(_lib.queue_storage_size(0))
         if _lib.spsc_init(self._q, capacity) != 0:
             raise MemoryError("spsc_init failed")
 
@@ -157,11 +167,10 @@ class SPSCQueue:
 
 
 class MPSCQueue:
-    """Multi Producer Single Consumer lock-free ring buffer."""
+    """Multi Producer Single Consumer bounded atomic ring buffer."""
 
     def __init__(self, capacity: int = 1024):
-        self._buf = ctypes.create_string_buffer(ctypes.sizeof(ctypes.c_void_p) * 8 + 256)
-        self._q = ctypes.cast(self._buf, ctypes.c_void_p)
+        self._buf, self._q = _aligned_storage(_lib.queue_storage_size(1))
         if _lib.mpsc_init(self._q, capacity) != 0:
             raise MemoryError("mpsc_init failed")
 
@@ -186,11 +195,10 @@ class MPSCQueue:
 
 
 class MPMCQueue:
-    """Multi Producer Multi Consumer lock-free ring buffer."""
+    """Multi Producer Multi Consumer bounded atomic ring buffer."""
 
     def __init__(self, capacity: int = 1024):
-        self._buf = ctypes.create_string_buffer(ctypes.sizeof(ctypes.c_void_p) * 8 + 256)
-        self._q = ctypes.cast(self._buf, ctypes.c_void_p)
+        self._buf, self._q = _aligned_storage(_lib.queue_storage_size(2))
         if _lib.mpmc_init(self._q, capacity) != 0:
             raise MemoryError("mpmc_init failed")
 
@@ -215,11 +223,10 @@ class MPMCQueue:
 
 
 class SPMCQueue:
-    """Single Producer Multi Consumer lock-free ring buffer."""
+    """Single Producer Multi Consumer bounded atomic ring buffer."""
 
     def __init__(self, capacity: int = 1024):
-        self._buf = ctypes.create_string_buffer(ctypes.sizeof(ctypes.c_void_p) * 8 + 256)
-        self._q = ctypes.cast(self._buf, ctypes.c_void_p)
+        self._buf, self._q = _aligned_storage(_lib.queue_storage_size(3))
         if _lib.spmc_init(self._q, capacity) != 0:
             raise MemoryError("spmc_init failed")
 
@@ -244,11 +251,10 @@ class SPMCQueue:
 
 
 class ULLQueue:
-    """Hybrid queue: SPSC fast path with MPMC fallback."""
+    """Bounded queue: MPMC by default; explicit SPSC only under single-owner contract."""
 
     def __init__(self, capacity: int = 1024):
-        self._buf = ctypes.create_string_buffer(1024)
-        self._q = ctypes.cast(self._buf, ctypes.c_void_p)
+        self._buf, self._q = _aligned_storage(_lib.queue_storage_size(4))
         if _lib.ull_queue_init(self._q, capacity) != 0:
             raise MemoryError("ull_queue_init failed")
 
@@ -270,13 +276,12 @@ class ULLQueue:
 
 
 class Disruptor:
-    """LMAX Disruptor pattern implementation."""
+    """Unavailable Disruptor placeholder; refuses initialization."""
 
     def __init__(self, capacity: int = 1024):
-        self._buf = ctypes.create_string_buffer(2048)
-        self._d = ctypes.cast(self._buf, ctypes.c_void_p)
+        self._buf, self._d = _aligned_storage(_lib.queue_storage_size(5))
         if _lib.disruptor_init(self._d, capacity) != 0:
-            raise MemoryError("disruptor_init failed")
+            raise NotImplementedError("Disruptor sequence barrier is not implemented")
 
     def __del__(self):
         _lib.disruptor_destroy(self._d)

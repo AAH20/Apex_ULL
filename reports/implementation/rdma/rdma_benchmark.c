@@ -2,7 +2,7 @@
  * rdma_benchmark.c — Comprehensive RDMA Benchmark Suite
  *
  * Measures:
- * - One-way latency (RDMA WRITE / SEND)
+ * - Local completion timing (RDMA WRITE / SEND); not remote application latency
  * - Throughput (bidirectional)
  * - Message rate (messages/sec)
  * - Jitter (min/max/stddev)
@@ -209,7 +209,7 @@ static int rdma_init(struct rdma_ctx *rctx, size_t buf_size) {
     return 0;
 }
 
-/* ── Latency benchmark: RDMA WRITE round-trip ── */
+/* ── Latency benchmark: local RDMA WRITE completion (not remote application round-trip) ── */
 static int benchmark_latency(struct rdma_ctx *rctx, int iterations, struct stats *lat_stats) {
     struct ibv_wc wc;
     struct ibv_sge sge = {
@@ -283,7 +283,7 @@ static int benchmark_throughput(struct rdma_ctx *rctx, int iterations, struct st
 
     uint64_t t_end = get_ns();
     uint64_t elapsed = t_end - t_start;
-    double gbps = (total_bytes * 8.0) / (elapsed / 1000.0) / 1e9;
+    double gbps = elapsed ? (total_bytes * 8.0) / (double)elapsed : 0.0;
     printf("  Throughput: %.2f Gb/s (%zu bytes in %.2f ms)\n",
            gbps, total_bytes, elapsed / 1e6);
     return 0;

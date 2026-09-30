@@ -573,7 +573,6 @@ def run_benchmarks(quick: bool = False) -> Dict:
         ("MPMC", bench_mpmc_latency),
         ("SPMC", bench_spmc_latency),
         ("ULL", bench_ull_queue_latency),
-        ("Disruptor", bench_disruptor_latency),
     ]:
         print(f"  {name}...", end=" ", flush=True)
         results["latency"][name] = fn(capacity, iters)
@@ -587,7 +586,6 @@ def run_benchmarks(quick: bool = False) -> Dict:
         ("MPMC", bench_mpmc_throughput),
         ("SPMC", bench_spmc_throughput),
         ("ULL", bench_ull_queue_throughput),
-        ("Disruptor", bench_disruptor_throughput),
     ]:
         print(f"  {name}...", end=" ", flush=True)
         results["throughput"][name] = fn(capacity, iters)

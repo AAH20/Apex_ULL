@@ -1,6 +1,7 @@
 #include "matching_engine/matching_engine.hpp"
 
 #include <algorithm>
+#include <stdexcept>
 
 namespace matching_engine {
 
@@ -23,13 +24,16 @@ void MatchingEngine::submit(const OrderAction& action) {
 }
 
 void MatchingEngine::add_order(const Order& order) {
+    if (book_.orders().contains(order.id)) throw std::invalid_argument("duplicate active order ID");
+    if (order.qty.raw() <= 0 || (order.type == OrderType::Limit && order.price.raw() <= 0))
+        throw std::invalid_argument("invalid order price or quantity");
     Order mutable_order = order;
     if (order.side == Side::Buy) {
         match_buy(mutable_order);
     } else {
         match_sell(mutable_order);
     }
-    if (mutable_order.qty.raw() > 0) {
+    if (mutable_order.qty.raw() > 0 && mutable_order.type == OrderType::Limit) {
         book_.add_order(mutable_order);
     }
 }

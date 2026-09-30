@@ -9,9 +9,8 @@ std::unique_ptr<DpdkPort> create_dpdk_port(bool use_stub) {
     if (use_stub) {
         return std::make_unique<DpdkStubPort>();
     }
-    // In production, this would create a real DPDK port.
-    // For now, fall back to stub.
-    return std::make_unique<DpdkStubPort>();
+    // Real DPDK is not linked by this implementation. Never silently simulate it.
+    return nullptr;
 }
 
 // ── DpdkStubPort ─────────────────────────────────────────────────────────────

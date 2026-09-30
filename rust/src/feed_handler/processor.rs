@@ -61,6 +61,9 @@ impl FeedHandlerBuilder {
     }
 
     pub fn build(self) -> FeedResult<FeedHandler> {
+        if self.pin_thread {
+            return Err(FeedError::DpdkPortConfig("thread affinity is not implemented; pin externally and disclose it".to_string()));
+        }
         let channel = Arc::new(FeedChannel::new(self.channel_capacity));
         let raw_channel = Arc::new(RawByteChannel::new(self.channel_capacity));
         let stats = Arc::new(FeedStats::new());

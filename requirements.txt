@@ -3,6 +3,7 @@
 
 # Core scientific computing
 numpy>=1.24.0
+networkx>=3.0
 scipy>=1.10.0
 
 # Testing

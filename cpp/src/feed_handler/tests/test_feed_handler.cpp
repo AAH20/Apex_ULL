@@ -124,3 +124,30 @@ TEST(FeedHandlerTest, StatsTracking) {
     EXPECT_EQ(stats.messages_parsed, 1u);
     EXPECT_EQ(stats.parse_errors, 0u);
 }
+
+TEST(FeedHandlerRegression, DrainsActualMessageAndOriginalTimestamp) {
+    FeedHandler fh(FeedHandlerConfig{});
+    ASSERT_TRUE(fh.initialize());
+    const auto packet = make_add_order_packet(42, "AAPL", 15000, 100);
+    ASSERT_EQ(fh.process_packet(packet, 123456), 1u);
+    int seen = 0;
+    fh.set_callback([&](const MarketDataMessage& msg, uint64_t timestamp) {
+        EXPECT_EQ(msg.order_id, 42u);
+        EXPECT_EQ(msg.price, 15000u);
+        EXPECT_EQ(timestamp, 123456u);
+        ++seen;
+    });
+    EXPECT_EQ(seen, 1);
+    EXPECT_EQ(fh.get_stats().latency_samples, 0u);
+    EXPECT_EQ(fh.get_stats().total_latency_nanos, 0u);
+}
+TEST(FeedHandlerRegression, UnsupportedRealBackendAndInvalidBurstFail) {
+    FeedHandlerConfig config;
+    config.use_dpdk_stub = false;
+    EXPECT_FALSE(FeedHandler(config).initialize());
+    config.use_dpdk_stub = true;
+    config.rx_burst_size = 257;
+    EXPECT_FALSE(FeedHandler(config).initialize());
+    config.rx_burst_size = 0;
+    EXPECT_FALSE(FeedHandler(config).initialize());
+}

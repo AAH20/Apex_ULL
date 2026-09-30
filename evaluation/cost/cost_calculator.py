@@ -48,7 +48,8 @@ class ULLCostModel:
     revenue_without_ull: float = 0.0
 
     # Risk
-    downtime_probability: float = 0.005  # 0.5% per year
+    downtime_probability: float = 0.005  # Annual probability of one incident (Bernoulli model).
+    mean_downtime_hours_per_incident: float = 2.0
     cost_per_hour_downtime: float = 50_000
     obsolescence_factor: float = 0.3  # 30% of CapEx
 
@@ -107,7 +108,7 @@ class ULLCostModel:
     @property
     def risk_cost(self) -> float:
         """Annual risk cost."""
-        downtime_cost = self.downtime_probability * 8760 * self.cost_per_hour_downtime
+        downtime_cost = self.downtime_probability * self.mean_downtime_hours_per_incident * self.cost_per_hour_downtime
         obsolescence_cost = self.obsolescence_factor * self.total_capex / 5
         return downtime_cost + obsolescence_cost
 
@@ -131,9 +132,10 @@ class ULLCostModel:
     @property
     def payback_years(self) -> float:
         """Payback period in years."""
-        if self.annual_revenue_uplift <= 0:
+        annual_net_cashflow = self.annual_revenue_uplift - self.annual_opex - self.risk_cost
+        if annual_net_cashflow <= 0:
             return float('inf')
-        return self.five_year_tco / self.annual_revenue_uplift
+        return self.total_capex / annual_net_cashflow
 
     def report(self) -> str:
         """Generate a formatted cost report."""

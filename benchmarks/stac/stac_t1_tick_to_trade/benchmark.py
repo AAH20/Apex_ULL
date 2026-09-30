@@ -285,16 +285,23 @@ def run_stac_t1(
                 "risk_check",
                 "order_send",
             ],
-            "sub_stage_timing": {
-                "tick_processing_ns_avg": sum(tick_processing_times) / len(tick_processing_times) if tick_processing_times else 0,
-                "signal_generation_ns_avg": sum(signal_generation_times) / len(signal_generation_times) if signal_generation_times else 0,
-                "order_encoding_ns_avg": sum(order_encoding_times) / len(order_encoding_times) if order_encoding_times else 0,
-                "risk_check_ns_avg": sum(risk_check_times) / len(risk_check_times) if risk_check_times else 0,
-                "order_send_ns_avg": sum(order_send_times) / len(order_send_times) if order_send_times else 0,
-            },
             "environment": get_environment_info(),
         },
     )
+    stages = {
+        "tick_processing": tick_processing_times,
+        "signal_generation": signal_generation_times,
+        "order_encoding": order_encoding_times,
+        "risk_check": risk_check_times,
+        "order_send": order_send_times,
+    }
+    result.metadata["sub_stage_timing"] = {
+        f"{name}_ns_avg": sum(samples[warmup_iterations:]) / len(samples[warmup_iterations:])
+        if samples[warmup_iterations:] else None for name, samples in stages.items()
+    }
+    result.metadata["measurement_scope"] = "Python synthetic pipeline including instrumentation; send_order does not perform network I/O"
+    result.name = "APEX-SYNTHETIC-TICK-PIPELINE"
+    result.description = "Instrumented in-memory Python tick processing; not an official STAC-T1 result"
     return result
 
 

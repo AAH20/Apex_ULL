@@ -1,0 +1,15 @@
+flowchart TB
+  PROFILE["AAH20 profile<br/>Independent domains and dated evidence"] --> ULL["Apex_ULL<br/>Native foundations"]
+  PROFILE --> TICK["Apex_Tick<br/>Bounded FPGA acceleration"]
+  PROFILE --> ATLAS["Apex_PerfAtlas<br/>Evidence and deployment economics"]
+  ULL -.->|"Candidate CPU reference and host adapter"| TICK
+  ULL -->|"Implemented host-software run manifest"| ATLAS
+  TICK -->|"Implemented RTL-simulation run manifest"| ATLAS
+  FIN["Finance and microstructure repositories<br/>Keep finance positioning"] -.->|"Candidate scenario fixtures"| TICK
+  ENG["Graph, compiler and swarm repositories<br/>Keep optimization positioning"] -.->|"Candidate offline experiments"| ATLAS
+  AI["AI benchmark and factory repositories<br/>Keep inference and capacity positioning"] -.->|"Candidate domain evidence adapters"| ATLAS
+  INFRA["Networking and datacenter repositories<br/>Keep infrastructure positioning"] -.->|"Candidate deployment scenarios"| ATLAS
+  GRC["GRC_Claw<br/>Keep governance positioning"] -.->|"Candidate custody receipts"| ATLAS
+  classDef card fill:#111827,stroke:#94a3b8,color:#ffffff,stroke-width:2px;
+  class PROFILE,ULL,TICK,ATLAS,FIN,ENG,AI,INFRA,GRC card;
+  linkStyle default stroke:#94a3b8,stroke-width:2px;

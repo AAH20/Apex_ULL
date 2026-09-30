@@ -115,37 +115,7 @@ def run_all(quick: bool = False, single: str | None = None) -> dict:
                   f"{data['throughput_ops_s']:>14,.0f} {score:>10.4f} {grade:>6}")
     print("=" * 70)
 
-    # Overall score
-    scores = [d["score"] for d in results.values() if "score" in d]
-    if scores:
-        overall = sum(scores) / len(scores)
-        print(f"Overall STAC Score: {overall:.4f}")
-    print()
-
-    # Comparative analysis
-    if len(results) > 1 and all("error" not in d for d in results.values()):
-        from common.harness import BenchmarkResult, LatencyStats, ScoreBreakdown
-        reconstructed = {}
-        for name, d in results.items():
-            lat_data = d["latency"]
-            latency = LatencyStats(**{k: lat_data[k] for k in lat_data})
-            sb_data = d.get("score_breakdown")
-            sb = ScoreBreakdown(**sb_data) if sb_data else None
-            reconstructed[name] = BenchmarkResult(
-                name=name,
-                version=d.get("version", ""),
-                description=d.get("description", ""),
-                duration_s=d.get("duration_s", 0),
-                iterations=d.get("iterations", 0),
-                throughput_ops_s=d.get("throughput_ops_s", 0),
-                latency=latency,
-                score=d.get("score", 0),
-                score_breakdown=sb,
-            )
-        print(generate_comparison_table(reconstructed))
-        print()
-
-    return results
+    print("No cross-workload score: these are unofficial synthetic examples, not STAC results.")
 
 
 def main():
@@ -158,6 +128,8 @@ def main():
     args = parser.parse_args()
 
     results = run_all(quick=args.quick, single=args.benchmark)
+    if any("error" in result for result in results.values()):
+        raise SystemExit("Synthetic benchmark failure; refusing a successful suite result")
 
     # Regression detection
     if args.baseline_dir and results:

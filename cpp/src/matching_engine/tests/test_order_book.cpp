@@ -84,3 +84,23 @@ TEST(OrderBookTest, BidQtyAt) {
     EXPECT_EQ(book.bid_qty_at(Price(100.0)).raw(), 150000);
     EXPECT_EQ(book.bid_qty_at(Price(99.0)).raw(), 0);
 }
+
+TEST(OrderBookRegression, CancelAndModifyConserveSharedLevelQuantity) {
+    OrderBook book;
+    book.add_order({OrderId{1}, Side::Buy, OrderType::Limit, Price(100.0), Quantity(10.0), 1});
+    book.add_order({OrderId{2}, Side::Buy, OrderType::Limit, Price(100.0), Quantity(20.0), 2});
+    ASSERT_TRUE(book.cancel_order(OrderId{1}));
+    EXPECT_EQ(book.bid_qty_at(Price(100.0)).raw(), Quantity(20.0).raw());
+    book.add_order({OrderId{3}, Side::Buy, OrderType::Limit, Price(100.0), Quantity(5.0), 3});
+    ASSERT_TRUE(book.modify_order(OrderId{2}, Price(101.0), Quantity(7.0)));
+    EXPECT_EQ(book.bid_qty_at(Price(100.0)).raw(), Quantity(5.0).raw());
+    EXPECT_EQ(book.bid_qty_at(Price(101.0)).raw(), Quantity(7.0).raw());
+}
+TEST(OrderBookRegression, DuplicateIdentityDoesNotMutateBook) {
+    OrderBook book;
+    const Order order{OrderId{1}, Side::Sell, OrderType::Limit, Price(100.0), Quantity(10.0), 1};
+    book.add_order(order);
+    EXPECT_THROW(book.add_order(order), std::invalid_argument);
+    EXPECT_EQ(book.order_count(), 1u);
+    EXPECT_EQ(book.ask_qty_at(Price(100.0)).raw(), Quantity(10.0).raw());
+}

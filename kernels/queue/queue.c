@@ -18,11 +18,13 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include <pthread.h>
 
 #if defined(__APPLE__)
 #include <mach/mach_time.h>
 static mach_timebase_info_data_t _timebase = {0, 0};
-static int _timebase_init = 0;
+static pthread_once_t _timebase_once = PTHREAD_ONCE_INIT;
+static void init_timebase(void) { mach_timebase_info(&_timebase); }
 #endif
 
 /* ================================================================== */
@@ -60,10 +62,7 @@ static inline void *alloc_cache_aligned(size_t size) {
 
 #if defined(__APPLE__)
 uint64_t ull_mach_now(void) {
-    if (!_timebase_init) {
-        mach_timebase_info(&_timebase);
-        _timebase_init = 1;
-    }
+    pthread_once(&_timebase_once, init_timebase);
     uint64_t t = mach_absolute_time();
     return t * _timebase.numer / _timebase.denom;
 }
@@ -79,7 +78,7 @@ uint64_t ull_now_ns_export(void) {
 /* ================================================================== */
 
 int spsc_init(spsc_queue_t *q, uint64_t capacity) {
-    if (!q) return -1;
+    if (!q || capacity > QUEUE_MAX_SIZE) return -1;
     capacity = next_pow2(capacity);
     if (capacity > QUEUE_MAX_SIZE) return -1;
 
@@ -105,7 +104,7 @@ bool spsc_push(spsc_queue_t *q, void *item) {
     const uint64_t next = h + 1;
 
     /* Full check: head - tail >= capacity */
-    if (next - atomic_load_explicit(&q->tail, __ATOMIC_ACQUIRE) >= q->capacity) {
+    if (next - atomic_load_explicit(&q->tail, __ATOMIC_ACQUIRE) > q->capacity) {
         return false;
     }
 
@@ -181,277 +180,189 @@ uint64_t spsc_pop_batch(spsc_queue_t *q, void **items, uint64_t n) {
     return n;
 }
 
-/* ================================================================== */
-/* MPSC Ring Buffer                                                    */
-/* ================================================================== */
+/* Bounded per-slot sequence queues. Payload is published only after writing it,
+ * and a slot is reusable only after the consumer has copied its payload.
+ * Reservation by a preempted thread can delay progress: no formal lock-free
+ * progress guarantee is claimed. Init/destroy require quiescent ownership. */
 
 int mpsc_init(mpsc_queue_t *q, uint64_t capacity) {
-    if (!q) return -1;
+    if (!q || capacity > QUEUE_MAX_SIZE) return -1;
     capacity = next_pow2(capacity);
-    if (capacity > QUEUE_MAX_SIZE) return -1;
-
-    q->ring = (void **)alloc_cache_aligned(capacity * sizeof(void *));
-    if (!q->ring) return -1;
-
-    memset(q->ring, 0, capacity * sizeof(void *));
-    atomic_init(&q->head, 0);
-    atomic_init(&q->tail, 0);
-    q->mask = capacity - 1;
-    q->capacity = capacity;
+    q->ring = alloc_cache_aligned(capacity * sizeof(void *));
+    q->sequence = alloc_cache_aligned(capacity * sizeof(*q->sequence));
+    if (!q->ring || !q->sequence) { free(q->ring); free(q->sequence); q->ring = NULL; q->sequence = NULL; return -1; }
+    atomic_init(&q->head, 0); atomic_init(&q->tail, 0);
+    q->mask = capacity - 1; q->capacity = capacity;
+    for (uint64_t i = 0; i < capacity; ++i) atomic_init(&q->sequence[i], i);
     return 0;
 }
-
 void mpsc_destroy(mpsc_queue_t *q) {
     if (!q) return;
-    free(q->ring);
-    q->ring = NULL;
+    free(q->ring); free(q->sequence); q->ring = NULL; q->sequence = NULL;
 }
-
 bool mpsc_push(mpsc_queue_t *q, void *item) {
-    uint64_t h, next;
-    /* CAS loop for multi-producer contention */
-    do {
-        h = atomic_load_explicit(&q->head, __ATOMIC_RELAXED);
-        next = h + 1;
-        const uint64_t t = atomic_load_explicit(&q->tail, __ATOMIC_ACQUIRE);
-        if ((h - t) >= q->capacity) return false;  /* full */
-    } while (!atomic_compare_exchange_weak_explicit(
-        &q->head, &h, next,
-        __ATOMIC_RELEASE, __ATOMIC_RELAXED));
-
-    q->ring[h & q->mask] = item;
-    return true;
-}
-
-bool mpsc_pop(mpsc_queue_t *q, void **item) {
-    const uint64_t t = atomic_load_explicit(&q->tail, __ATOMIC_RELAXED);
-
-    if (t == atomic_load_explicit(&q->head, __ATOMIC_ACQUIRE)) {
-        return false;  /* empty */
+    uint64_t pos = atomic_load_explicit(&q->head, memory_order_relaxed);
+    for (;;) {
+        const uint64_t seq = atomic_load_explicit(&q->sequence[pos & q->mask], memory_order_acquire);
+        const int64_t difference = (int64_t)(seq - pos);
+        if (difference == 0) {
+            if (atomic_compare_exchange_weak_explicit(&q->head, &pos, pos + 1, memory_order_relaxed, memory_order_relaxed)) break;
+        } else if (difference < 0) return false;
+        else pos = atomic_load_explicit(&q->head, memory_order_relaxed);
     }
-
-    *item = q->ring[t & q->mask];
-    atomic_store_explicit(&q->tail, t + 1, __ATOMIC_RELEASE);
+    q->ring[pos & q->mask] = item;
+    atomic_store_explicit(&q->sequence[pos & q->mask], pos + 1, memory_order_release);
     return true;
 }
-
+bool mpsc_pop(mpsc_queue_t *q, void **item) {
+    if (!item) return false;
+    uint64_t pos = atomic_load_explicit(&q->tail, memory_order_relaxed);
+    for (;;) {
+        const uint64_t seq = atomic_load_explicit(&q->sequence[pos & q->mask], memory_order_acquire);
+        const int64_t difference = (int64_t)(seq - (pos + 1));
+        if (difference == 0) {
+            if (atomic_compare_exchange_weak_explicit(&q->tail, &pos, pos + 1, memory_order_relaxed, memory_order_relaxed)) break;
+        } else if (difference < 0) return false;
+        else pos = atomic_load_explicit(&q->tail, memory_order_relaxed);
+    }
+    *item = q->ring[pos & q->mask];
+    atomic_store_explicit(&q->sequence[pos & q->mask], pos + q->capacity, memory_order_release);
+    return true;
+}
 bool mpsc_is_empty(const mpsc_queue_t *q) {
-    return atomic_load_explicit(&q->head, __ATOMIC_ACQUIRE) ==
-           atomic_load_explicit(&q->tail, __ATOMIC_ACQUIRE);
+    const uint64_t pos = atomic_load_explicit(&q->tail, memory_order_relaxed);
+    return atomic_load_explicit(&q->sequence[pos & q->mask], memory_order_acquire) != pos + 1;
 }
-
 uint64_t mpsc_size(const mpsc_queue_t *q) {
-    const uint64_t h = atomic_load_explicit(&q->head, __ATOMIC_ACQUIRE);
-    const uint64_t t = atomic_load_explicit(&q->tail, __ATOMIC_ACQUIRE);
-    return h - t;
+    const uint64_t tail = atomic_load_explicit(&q->tail, memory_order_acquire);
+    const uint64_t head = atomic_load_explicit(&q->head, memory_order_acquire);
+    const uint64_t size = head - tail;
+    return size > q->capacity ? q->capacity : size; // Approximate, includes reservations.
 }
-
-/* ================================================================== */
-/* MPMC Ring Buffer                                                    */
-/* ================================================================== */
 
 int mpmc_init(mpmc_queue_t *q, uint64_t capacity) {
-    if (!q) return -1;
+    if (!q || capacity > QUEUE_MAX_SIZE) return -1;
     capacity = next_pow2(capacity);
-    if (capacity > QUEUE_MAX_SIZE) return -1;
-
-    q->ring = (void **)alloc_cache_aligned(capacity * sizeof(void *));
-    if (!q->ring) return -1;
-
-    memset(q->ring, 0, capacity * sizeof(void *));
-    atomic_init(&q->head, 0);
-    atomic_init(&q->tail, 0);
-    q->mask = capacity - 1;
-    q->capacity = capacity;
+    q->ring = alloc_cache_aligned(capacity * sizeof(void *));
+    q->sequence = alloc_cache_aligned(capacity * sizeof(*q->sequence));
+    if (!q->ring || !q->sequence) { free(q->ring); free(q->sequence); q->ring = NULL; q->sequence = NULL; return -1; }
+    atomic_init(&q->head, 0); atomic_init(&q->tail, 0);
+    q->mask = capacity - 1; q->capacity = capacity;
+    for (uint64_t i = 0; i < capacity; ++i) atomic_init(&q->sequence[i], i);
     return 0;
 }
-
 void mpmc_destroy(mpmc_queue_t *q) {
     if (!q) return;
-    free(q->ring);
-    q->ring = NULL;
+    free(q->ring); free(q->sequence); q->ring = NULL; q->sequence = NULL;
 }
-
 bool mpmc_push(mpmc_queue_t *q, void *item) {
-    uint64_t h, next;
-    do {
-        h = atomic_load_explicit(&q->head, __ATOMIC_RELAXED);
-        next = h + 1;
-        const uint64_t t = atomic_load_explicit(&q->tail, __ATOMIC_ACQUIRE);
-        if ((h - t) >= q->capacity) return false;
-    } while (!atomic_compare_exchange_weak_explicit(
-        &q->head, &h, next,
-        __ATOMIC_RELEASE, __ATOMIC_RELAXED));
-
-    q->ring[h & q->mask] = item;
+    uint64_t pos = atomic_load_explicit(&q->head, memory_order_relaxed);
+    for (;;) {
+        const uint64_t seq = atomic_load_explicit(&q->sequence[pos & q->mask], memory_order_acquire);
+        const int64_t difference = (int64_t)(seq - pos);
+        if (difference == 0) {
+            if (atomic_compare_exchange_weak_explicit(&q->head, &pos, pos + 1, memory_order_relaxed, memory_order_relaxed)) break;
+        } else if (difference < 0) return false;
+        else pos = atomic_load_explicit(&q->head, memory_order_relaxed);
+    }
+    q->ring[pos & q->mask] = item;
+    atomic_store_explicit(&q->sequence[pos & q->mask], pos + 1, memory_order_release);
     return true;
 }
-
 bool mpmc_pop(mpmc_queue_t *q, void **item) {
-    uint64_t t, next;
-    do {
-        t = atomic_load_explicit(&q->tail, __ATOMIC_RELAXED);
-        next = t + 1;
-        const uint64_t h = atomic_load_explicit(&q->head, __ATOMIC_ACQUIRE);
-        if (t == h) return false;  /* empty */
-    } while (!atomic_compare_exchange_weak_explicit(
-        &q->tail, &t, next,
-        __ATOMIC_RELEASE, __ATOMIC_RELAXED));
-
-    *item = q->ring[t & q->mask];
+    if (!item) return false;
+    uint64_t pos = atomic_load_explicit(&q->tail, memory_order_relaxed);
+    for (;;) {
+        const uint64_t seq = atomic_load_explicit(&q->sequence[pos & q->mask], memory_order_acquire);
+        const int64_t difference = (int64_t)(seq - (pos + 1));
+        if (difference == 0) {
+            if (atomic_compare_exchange_weak_explicit(&q->tail, &pos, pos + 1, memory_order_relaxed, memory_order_relaxed)) break;
+        } else if (difference < 0) return false;
+        else pos = atomic_load_explicit(&q->tail, memory_order_relaxed);
+    }
+    *item = q->ring[pos & q->mask];
+    atomic_store_explicit(&q->sequence[pos & q->mask], pos + q->capacity, memory_order_release);
     return true;
 }
-
 bool mpmc_is_empty(const mpmc_queue_t *q) {
-    return atomic_load_explicit(&q->head, __ATOMIC_ACQUIRE) ==
-           atomic_load_explicit(&q->tail, __ATOMIC_ACQUIRE);
+    const uint64_t pos = atomic_load_explicit(&q->tail, memory_order_relaxed);
+    return atomic_load_explicit(&q->sequence[pos & q->mask], memory_order_acquire) != pos + 1;
 }
-
 uint64_t mpmc_size(const mpmc_queue_t *q) {
-    const uint64_t h = atomic_load_explicit(&q->head, __ATOMIC_ACQUIRE);
-    const uint64_t t = atomic_load_explicit(&q->tail, __ATOMIC_ACQUIRE);
-    return h - t;
+    const uint64_t tail = atomic_load_explicit(&q->tail, memory_order_acquire);
+    const uint64_t head = atomic_load_explicit(&q->head, memory_order_acquire);
+    const uint64_t size = head - tail;
+    return size > q->capacity ? q->capacity : size; // Approximate, includes reservations.
 }
-
-/* ================================================================== */
-/* SPMC Ring Buffer                                                    */
-/* ================================================================== */
 
 int spmc_init(spmc_queue_t *q, uint64_t capacity) {
-    if (!q) return -1;
+    if (!q || capacity > QUEUE_MAX_SIZE) return -1;
     capacity = next_pow2(capacity);
-    if (capacity > QUEUE_MAX_SIZE) return -1;
-
-    q->ring = (void **)alloc_cache_aligned(capacity * sizeof(void *));
-    if (!q->ring) return -1;
-
-    memset(q->ring, 0, capacity * sizeof(void *));
-    atomic_init(&q->head, 0);
-    atomic_init(&q->tail, 0);
-    q->mask = capacity - 1;
-    q->capacity = capacity;
+    q->ring = alloc_cache_aligned(capacity * sizeof(void *));
+    q->sequence = alloc_cache_aligned(capacity * sizeof(*q->sequence));
+    if (!q->ring || !q->sequence) { free(q->ring); free(q->sequence); q->ring = NULL; q->sequence = NULL; return -1; }
+    atomic_init(&q->head, 0); atomic_init(&q->tail, 0);
+    q->mask = capacity - 1; q->capacity = capacity;
+    for (uint64_t i = 0; i < capacity; ++i) atomic_init(&q->sequence[i], i);
     return 0;
 }
-
 void spmc_destroy(spmc_queue_t *q) {
     if (!q) return;
-    free(q->ring);
-    q->ring = NULL;
+    free(q->ring); free(q->sequence); q->ring = NULL; q->sequence = NULL;
 }
-
 bool spmc_push(spmc_queue_t *q, void *item) {
-    const uint64_t h = atomic_load_explicit(&q->head, __ATOMIC_RELAXED);
-    const uint64_t next = h + 1;
-
-    if ((next - atomic_load_explicit(&q->tail, __ATOMIC_ACQUIRE)) >= q->capacity) {
-        return false;
+    uint64_t pos = atomic_load_explicit(&q->head, memory_order_relaxed);
+    for (;;) {
+        const uint64_t seq = atomic_load_explicit(&q->sequence[pos & q->mask], memory_order_acquire);
+        const int64_t difference = (int64_t)(seq - pos);
+        if (difference == 0) {
+            if (atomic_compare_exchange_weak_explicit(&q->head, &pos, pos + 1, memory_order_relaxed, memory_order_relaxed)) break;
+        } else if (difference < 0) return false;
+        else pos = atomic_load_explicit(&q->head, memory_order_relaxed);
     }
-
-    q->ring[h & q->mask] = item;
-    atomic_store_explicit(&q->head, next, __ATOMIC_RELEASE);
+    q->ring[pos & q->mask] = item;
+    atomic_store_explicit(&q->sequence[pos & q->mask], pos + 1, memory_order_release);
     return true;
 }
-
 bool spmc_pop(spmc_queue_t *q, void **item) {
-    uint64_t t, next;
-    do {
-        t = atomic_load_explicit(&q->tail, __ATOMIC_RELAXED);
-        next = t + 1;
-        const uint64_t h = atomic_load_explicit(&q->head, __ATOMIC_ACQUIRE);
-        if (t == h) return false;  /* empty */
-    } while (!atomic_compare_exchange_weak_explicit(
-        &q->tail, &t, next,
-        __ATOMIC_RELEASE, __ATOMIC_RELAXED));
-
-    *item = q->ring[t & q->mask];
+    if (!item) return false;
+    uint64_t pos = atomic_load_explicit(&q->tail, memory_order_relaxed);
+    for (;;) {
+        const uint64_t seq = atomic_load_explicit(&q->sequence[pos & q->mask], memory_order_acquire);
+        const int64_t difference = (int64_t)(seq - (pos + 1));
+        if (difference == 0) {
+            if (atomic_compare_exchange_weak_explicit(&q->tail, &pos, pos + 1, memory_order_relaxed, memory_order_relaxed)) break;
+        } else if (difference < 0) return false;
+        else pos = atomic_load_explicit(&q->tail, memory_order_relaxed);
+    }
+    *item = q->ring[pos & q->mask];
+    atomic_store_explicit(&q->sequence[pos & q->mask], pos + q->capacity, memory_order_release);
     return true;
 }
-
 bool spmc_is_empty(const spmc_queue_t *q) {
-    return atomic_load_explicit(&q->head, __ATOMIC_ACQUIRE) ==
-           atomic_load_explicit(&q->tail, __ATOMIC_ACQUIRE);
+    const uint64_t pos = atomic_load_explicit(&q->tail, memory_order_relaxed);
+    return atomic_load_explicit(&q->sequence[pos & q->mask], memory_order_acquire) != pos + 1;
 }
-
 uint64_t spmc_size(const spmc_queue_t *q) {
-    const uint64_t h = atomic_load_explicit(&q->head, __ATOMIC_ACQUIRE);
-    const uint64_t t = atomic_load_explicit(&q->tail, __ATOMIC_ACQUIRE);
-    return h - t;
+    const uint64_t tail = atomic_load_explicit(&q->tail, memory_order_acquire);
+    const uint64_t head = atomic_load_explicit(&q->head, memory_order_acquire);
+    const uint64_t size = head - tail;
+    return size > q->capacity ? q->capacity : size; // Approximate, includes reservations.
 }
 
 /* ================================================================== */
 /* LMAX Disruptor                                                      */
 /* ================================================================== */
 
-int disruptor_init(disruptor_t *d, uint64_t capacity) {
-    if (!d) return -1;
-    capacity = next_pow2(capacity);
-    if (capacity > QUEUE_MAX_SIZE) return -1;
-
-    d->ring = (void **)alloc_cache_aligned(capacity * sizeof(void *));
-    if (!d->ring) return -1;
-
-    memset(d->ring, 0, capacity * sizeof(void *));
-    atomic_init(&d->cursor, 0);
-    d->mask = capacity - 1;
-    d->capacity = capacity;
-    d->num_consumers = 0;
-
-    for (int i = 0; i < DISRUPTOR_MAX_CONSUMERS; i++) {
-        atomic_init(&d->consumer_seq[i], 0);
-        d->handlers[i] = NULL;
-        d->handler_ctx[i] = NULL;
-    }
-    return 0;
-}
-
-void disruptor_destroy(disruptor_t *d) {
-    if (!d) return;
-    free(d->ring);
-    d->ring = NULL;
-}
-
-bool disruptor_register_consumer(disruptor_t *d, uint32_t id,
-                                  disruptor_event_handler_t handler, void *ctx) {
-    if (!d || id >= DISRUPTOR_MAX_CONSUMERS || !handler) return false;
-    d->handlers[id] = handler;
-    d->handler_ctx[id] = ctx;
-    if (id >= d->num_consumers) d->num_consumers = id + 1;
-    return true;
-}
-
-uint64_t disruptor_next_sequence(disruptor_t *d) {
-    return atomic_load_explicit(&d->cursor, __ATOMIC_ACQUIRE);
-}
-
-bool disruptor_claim(disruptor_t *d, uint64_t *seq) {
-    uint64_t s, next;
-    do {
-        s = atomic_load_explicit(&d->cursor, __ATOMIC_RELAXED);
-        next = s + 1;
-        /* Check if slot is available (not overwritten) */
-        const uint64_t min_consumer = atomic_load_explicit(
-            &d->consumer_seq[0], __ATOMIC_ACQUIRE);
-        if (s - min_consumer >= d->capacity) return false;
-    } while (!atomic_compare_exchange_weak_explicit(
-        &d->cursor, &s, next,
-        __ATOMIC_RELEASE, __ATOMIC_RELAXED));
-    *seq = s;
-    return true;
-}
-
-bool disruptor_publish(disruptor_t *d, void *event) {
-    uint64_t seq;
-    if (!disruptor_claim(d, &seq)) return false;
-    d->ring[seq & d->mask] = event;
-    return true;
-}
-
-void disruptor_commit(disruptor_t *d, uint64_t seq) {
-    /* Signal that this sequence is ready for consumers */
-    /* In a full implementation, this would update a sequence barrier */
-    (void)d;
-    (void)seq;
-}
+/* The previous placeholder published cursor before payload and had no barrier.
+ * Refuse to initialize rather than expose an unsafe working-looking backend. */
+int disruptor_init(disruptor_t *d, uint64_t capacity) { (void)capacity; if (d) memset(d, 0, sizeof(*d)); errno = ENOTSUP; return -1; }
+void disruptor_destroy(disruptor_t *d) { (void)d; }
+bool disruptor_register_consumer(disruptor_t *d, uint32_t id, disruptor_event_handler_t handler, void *ctx) { (void)d; (void)id; (void)handler; (void)ctx; return false; }
+uint64_t disruptor_next_sequence(disruptor_t *d) { (void)d; return 0; }
+bool disruptor_claim(disruptor_t *d, uint64_t *seq) { (void)d; (void)seq; return false; }
+bool disruptor_publish(disruptor_t *d, void *event) { (void)d; (void)event; return false; }
+void disruptor_commit(disruptor_t *d, uint64_t seq) { (void)d; (void)seq; }
 
 /* ================================================================== */
 /* Custom ULL Queue (hybrid)                                           */
@@ -484,24 +395,28 @@ bool ull_queue_push(ull_queue_t *q, void *item) {
         return mpmc_push(&q->mpmc, item);
     }
 
-    /* Auto mode: try SPSC first, fall back to MPMC */
-    if (spsc_push(&q->spsc, item)) {
-        atomic_fetch_add_explicit(&q->use_count, 1, __ATOMIC_RELAXED);
-        return true;
-    }
+    // Auto mode stays on one MPMC queue; splitting queues breaks global FIFO.
     return mpmc_push(&q->mpmc, item);
 }
 
 bool ull_queue_pop(ull_queue_t *q, void **item) {
     if (!q) return false;
-
-    /* Try SPSC first */
-    if (spsc_pop(&q->spsc, item)) return true;
-    /* Fall back to MPMC */
-    return mpmc_pop(&q->mpmc, item);
+    return q->mode == 1 ? spsc_pop(&q->spsc, item) : mpmc_pop(&q->mpmc, item);
 }
 
 void ull_queue_set_mode(ull_queue_t *q, int mode) {
     if (!q) return;
-    if (mode >= 0 && mode <= 2) q->mode = mode;
+    if (mode >= 0 && mode <= 2 && spsc_is_empty(&q->spsc) && mpmc_is_empty(&q->mpmc)) q->mode = mode;
+}
+
+size_t queue_storage_size(unsigned topology) {
+    switch(topology) {
+        case 0: return sizeof(spsc_queue_t);
+        case 1: return sizeof(mpsc_queue_t);
+        case 2: return sizeof(mpmc_queue_t);
+        case 3: return sizeof(spmc_queue_t);
+        case 4: return sizeof(ull_queue_t);
+        case 5: return sizeof(disruptor_t);
+        default: return 0;
+    }
 }

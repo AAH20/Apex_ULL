@@ -88,8 +88,8 @@ jobs:
 
       - name: pip-audit
         run: |
-          pip-audit --format=json --output=pip-audit-results.json || true
-          pip-audit --format=screen || true
+          pip-audit -r requirements.txt --format=json --output=pip-audit-results.json || true
+          pip-audit -r requirements.txt --format=columns || true
 
       - name: Safety check
         run: |
@@ -122,12 +122,9 @@ jobs:
           fetch-depth: 0
 
       - name: TruffleHog secret scan
-        continue-on-error: true
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
           extra_args: --only-verified
 
   # ── Infrastructure as Code Scan ────────────────────────────────
@@ -205,37 +202,10 @@ jobs:
 
       - name: Install fuzzing tools
         run: |
-          pip install hypothesis atheris
+          pip install hypothesis numpy scipy networkx
 
-      - name: Run property-based fuzz tests
-        run: |
-          python -c "
-          import sys
-          sys.path.insert(0, '.')
-          from hypothesis import given, settings, strategies as st
-          import unittest
-          
-          class FuzzJSSP(unittest.TestCase):
-              @given(
-                  n_jobs=st.integers(min_value=2, max_value=8),
-                  n_machines=st.integers(min_value=2, max_value=8),
-              )
-              @settings(max_examples=50, deadline=5000)
-              def test_jssp_termination(self, n_jobs, n_machines):
-                  from kernels.scheduling.jssp import JSSPSolver, JSSPInstance
-                  import random
-                  random.seed(42)
-                  durations = [[random.randint(1, 10) for _ in range(n_machines)] for _ in range(n_jobs)]
-                  machines = [list(range(n_machines)) for _ in range(n_jobs)]
-                  for m in machines:
-                      random.shuffle(m)
-                  instance = JSSPInstance(n_jobs, n_machines, durations, machines)
-                  solver = JSSPSolver(instance)
-                  solution = solver.solve()
-                  self.assertIsNotNone(solution)
-          
-          unittest.main(argv=[''], exit=False, verbosity=2)
-          " || echo "Fuzz tests completed with some failures (expected for random inputs)"
+      - name: Run generated scheduling invariants
+        run: python -m unittest discover -s tests -p 'test_scheduling_properties.py' -v
 
   # ── Security Report ────────────────────────────────────────────
   security-report:
@@ -250,16 +220,14 @@ jobs:
           path: security-artifacts
 
       - name: Generate security summary
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
         run: |
-          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Scan | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| SAST (Bandit + Semgrep) | Completed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Dependency Scan (pip-audit + Safety) | Completed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Secret Detection (TruffleHog) | Completed |" >> $GITHUB_STEP_SUMMARY
-          echo "| IaC Scan (Checkov) | Completed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Container Scan (Trivy) | Completed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Fuzz Testing | Completed |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "See individual job logs for detailed findings." >> $GITHUB_STEP_SUMMARY
+          python - <<'PYTHON'
+          import json, os
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as report:
+              report.write('## Security job execution status\n\n')
+              for name, job in json.loads(os.environ['JOB_RESULTS']).items():
+                  report.write(f"- {name}: {job['result']}\n")
+              report.write('\nSAST, dependency and IaC steps retain advisory findings; success is not a clean-security attestation. Inspect retained artifacts and step logs. Container scanning is skipped when no Dockerfile exists.\n')
+          PYTHON

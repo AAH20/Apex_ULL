@@ -77,3 +77,19 @@ TEST(MatchingEngineTest, MultipleFills) {
     EXPECT_EQ(engine.book().order_count(), 1u);
     EXPECT_EQ(engine.book().best_bid().raw(), 1000000);
 }
+
+TEST(MatchingEngineRegression, DuplicateIsRejectedBeforeTrades) {
+    MatchingEngine engine;
+    engine.add_order({OrderId{1}, Side::Buy, OrderType::Limit, Price(100.0), Quantity(10.0), 1});
+    EXPECT_THROW(engine.add_order({OrderId{1}, Side::Sell, OrderType::Limit, Price(100.0), Quantity(5.0), 2}), std::invalid_argument);
+    EXPECT_TRUE(engine.trades().empty());
+    EXPECT_EQ(engine.book().order_count(), 1u);
+}
+TEST(MatchingEngineRegression, CancelPartiallyFilledSharedLevel) {
+    MatchingEngine engine;
+    engine.add_order({OrderId{1}, Side::Buy, OrderType::Limit, Price(100.0), Quantity(10.0), 1});
+    engine.add_order({OrderId{2}, Side::Buy, OrderType::Limit, Price(100.0), Quantity(20.0), 2});
+    engine.add_order({OrderId{3}, Side::Sell, OrderType::Limit, Price(100.0), Quantity(4.0), 3});
+    ASSERT_TRUE(engine.cancel_order(OrderId{1}));
+    EXPECT_EQ(engine.book().bid_qty_at(Price(100.0)).raw(), Quantity(20.0).raw());
+}

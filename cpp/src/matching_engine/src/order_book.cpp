@@ -1,10 +1,17 @@
 #include "matching_engine/order_book.hpp"
 
 #include <algorithm>
+#include <stdexcept>
 
 namespace matching_engine {
 
 void OrderBook::add_order(const Order& order) {
+    if (orders_.contains(order.id)) {
+        throw std::invalid_argument("duplicate order ID");
+    }
+    if (order.qty.raw() <= 0 || order.price.raw() <= 0) {
+        throw std::invalid_argument("price and quantity must be positive");
+    }
     OrderEntry entry{order.price, order.qty, order.side};
     orders_[order.id] = entry;
 
@@ -29,6 +36,7 @@ bool OrderBook::cancel_order(OrderId id) {
     if (it->second.side == Side::Buy) {
         auto lit = bids_.find(it->second.price);
         if (lit != bids_.end()) {
+            lit->second.total_qty = Quantity(lit->second.total_qty.raw() - it->second.remaining.raw());
             remove_from_level(lit->second, id);
             if (lit->second.orders.empty()) {
                 bids_.erase(lit);
@@ -37,6 +45,7 @@ bool OrderBook::cancel_order(OrderId id) {
     } else {
         auto lit = asks_.find(it->second.price);
         if (lit != asks_.end()) {
+            lit->second.total_qty = Quantity(lit->second.total_qty.raw() - it->second.remaining.raw());
             remove_from_level(lit->second, id);
             if (lit->second.orders.empty()) {
                 asks_.erase(lit);
@@ -52,6 +61,9 @@ std::optional<Order> OrderBook::modify_order(OrderId id, Price new_price, Quanti
     auto it = orders_.find(id);
     if (it == orders_.end()) return std::nullopt;
 
+    if (new_price.raw() <= 0 || new_qty.raw() <= 0) {
+        throw std::invalid_argument("price and quantity must be positive");
+    }
     Order modified{id, it->second.side, OrderType::Limit, new_price, new_qty, 0};
     cancel_order(id);
     add_order(modified);

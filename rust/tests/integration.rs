@@ -110,7 +110,7 @@ fn test_concurrent_producers_single_consumer() {
 }
 
 #[test]
-fn test_handler_with_real_dpdk_config() {
+fn test_handler_rejects_unimplemented_real_dpdk() {
     use feed_handler::dpdk::DpdkConfig;
 
     let config = DpdkConfig::new(0);
@@ -118,8 +118,8 @@ fn test_handler_with_real_dpdk_config() {
         .with_dpdk_config(config)
         .build();
 
-    // Should succeed (stub implementation)
-    assert!(result.is_ok());
+    // Real DPDK must fail until the actual backend is linked.
+    assert!(result.is_err());
 }
 
 #[test]
@@ -263,4 +263,9 @@ fn test_handler_drop_stops_thread() {
     // Handler should be dropped without explicit stop
     drop(handler);
     // If we get here without panic, the Drop impl worked
+}
+
+#[test]
+fn test_affinity_request_is_not_silently_ignored() {
+    assert!(FeedHandlerBuilder::new().pin_thread(true).build().is_err());
 }

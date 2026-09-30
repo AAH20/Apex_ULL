@@ -3,7 +3,7 @@
 //! This module provides a trait-based abstraction over DPDK's
 //! Environment Abstraction Layer (EAL) for kernel-bypass packet I/O.
 //!
-//! In production, this wraps `rte_eth_rx_burst()` / `rte_eth_tx_burst()`.
+//! A future real backend would wrap `rte_eth_rx_burst()` / `rte_eth_tx_burst()`.
 //! For testing and non-DPDK environments, a `MockDpdkPort` is provided.
 
 use bytes::Bytes;
@@ -100,10 +100,9 @@ impl RealDpdkPort {
             ));
         }
 
-        Ok(Self {
-            config,
-            active: Arc::new(AtomicBool::new(true)),
-        })
+        Err(FeedError::DpdkPortConfig(
+            "real DPDK backend is not implemented; use MockDpdkPort explicitly for simulation".to_string(),
+        ))
     }
 }
 
@@ -229,6 +228,11 @@ mod tests {
         };
         let result = RealDpdkPort::new(config);
         assert!(matches!(result, Err(FeedError::DpdkPortConfig(_))));
+    }
+
+    #[test]
+    fn test_real_backend_does_not_silently_simulate() {
+        assert!(matches!(RealDpdkPort::new(DpdkConfig::default()), Err(FeedError::DpdkPortConfig(_))));
     }
 
     #[test]

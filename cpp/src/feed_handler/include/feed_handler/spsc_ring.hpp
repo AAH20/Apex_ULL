@@ -9,6 +9,8 @@
 #include <new>
 #include <optional>
 #include <type_traits>
+#include <limits>
+#include <stdexcept>
 
 namespace feed_handler {
 
@@ -24,9 +26,12 @@ namespace feed_handler {
 template <typename T>
 class SpscRing {
 public:
+    static_assert(std::is_nothrow_move_constructible_v<T>, "ring elements require nothrow move construction");
+    static_assert(std::is_nothrow_destructible_v<T>, "ring elements require nothrow destruction");
+
     /// Construct a ring with capacity rounded up to the next power of two.
     explicit SpscRing(std::size_t capacity)
-        : capacity_(next_power_of_two(capacity)),
+        : capacity_(checked_capacity(capacity)),
           mask_(capacity_ - 1),
           buffer_(static_cast<T*>(::operator new[](capacity_ * sizeof(T),
                                                       std::align_val_t{alignof(T)}))) {
@@ -37,7 +42,9 @@ public:
 
     ~SpscRing() {
         // Destroy any remaining elements.
-        while (pop()) {}
+        auto tail = tail_.value.load(std::memory_order_relaxed);
+        const auto head = head_.value.load(std::memory_order_relaxed);
+        while (tail != head) std::destroy_at(&buffer_[tail++ & mask_]);
         ::operator delete[](buffer_, std::align_val_t{alignof(T)});
     }
 
@@ -70,13 +77,13 @@ public:
             return false;  // full
         }
 
-        buffer_[head & mask_] = std::move(item);
+        std::construct_at(&buffer_[head & mask_], std::move(item));
         head_.value.store(next_head, std::memory_order_release);
         return true;
     }
 
     /// Push a copy. Returns false if the ring is full.
-    bool push(const T& item) noexcept {
+    bool push(const T& item) noexcept(std::is_nothrow_copy_constructible_v<T>) {
         const auto head = head_.value.load(std::memory_order_relaxed);
         const auto next_head = head + 1;
 
@@ -84,7 +91,7 @@ public:
             return false;
         }
 
-        buffer_[head & mask_] = item;
+        std::construct_at(&buffer_[head & mask_], item);
         head_.value.store(next_head, std::memory_order_release);
         return true;
     }
@@ -98,7 +105,8 @@ public:
             return std::nullopt;  // empty
         }
 
-        T item = std::move(buffer_[tail & mask_]);
+        std::optional<T> item(std::in_place, std::move(buffer_[tail & mask_]));
+        std::destroy_at(&buffer_[tail & mask_]);
         tail_.value.store(tail + 1, std::memory_order_release);
         return item;
     }
@@ -114,6 +122,15 @@ public:
     }
 
 private:
+    static std::size_t checked_capacity(std::size_t capacity) {
+        const auto max = std::numeric_limits<std::size_t>::max();
+        if (capacity == 0 || capacity > (max >> 1) || capacity > max / sizeof(T))
+            throw std::invalid_argument("invalid ring capacity");
+        const auto rounded = next_power_of_two(capacity);
+        if (rounded > max / sizeof(T)) throw std::length_error("ring allocation overflow");
+        return rounded;
+    }
+
     // Separate cache lines for head and tail to prevent false sharing.
     alignas(kCacheLineSize) CacheAligned<std::atomic<std::size_t>> head_{std::size_t{0}};
     alignas(kCacheLineSize) CacheAligned<std::atomic<std::size_t>> tail_{std::size_t{0}};

@@ -1,7 +1,7 @@
 /*
  * ULL Queue Optimization Kernel — C Header
  * =========================================
- * Ultra-low-latency lock-free queue implementations for HFT and
+ * Bounded atomic queue implementations for HFT research and
  * real-time systems. All queues use cache-line alignment, power-of-2
  * ring sizes, and minimal memory barriers.
  *
@@ -10,7 +10,7 @@
  *   - MPSC: Multi Producer, Single Consumer  (CAS on enqueue only)
  *   - MPMC: Multi Producer, Multi Consumer  (CAS on both ends)
  *   - SPMC: Single Producer, Multi Consumer  (CAS on dequeue only)
- *   - Disruptor: LMAX-style event processor with sequence barriers
+ *   - Disruptor: unavailable; init fails until a real sequence barrier exists
  *
  * Build:  clang -O3 -march=native -shared -fPIC -o libqueue.so queue.c
  */
@@ -22,6 +22,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <time.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +57,8 @@ typedef struct {
     void **ring;
 } spsc_queue_t;
 
+size_t queue_storage_size(unsigned topology);
+
 int  spsc_init(spsc_queue_t *q, uint64_t capacity);
 void spsc_destroy(spsc_queue_t *q);
 bool spsc_push(spsc_queue_t *q, void *item);
@@ -84,6 +87,7 @@ typedef struct {
     uint64_t mask;
     uint64_t capacity;
     void **ring;
+    _Atomic uint64_t *sequence; // Per-slot publication and reclamation.
 } mpsc_queue_t;
 
 int  mpsc_init(mpsc_queue_t *q, uint64_t capacity);
@@ -107,6 +111,7 @@ typedef struct {
     uint64_t mask;
     uint64_t capacity;
     void **ring;
+    _Atomic uint64_t *sequence; // Per-slot publication and reclamation.
 } mpmc_queue_t;
 
 int  mpmc_init(mpmc_queue_t *q, uint64_t capacity);
@@ -132,6 +137,7 @@ typedef struct {
     uint64_t mask;
     uint64_t capacity;
     void **ring;
+    _Atomic uint64_t *sequence; // Per-slot publication and reclamation.
 } spmc_queue_t;
 
 int  spmc_init(spmc_queue_t *q, uint64_t capacity);
@@ -190,7 +196,7 @@ typedef struct {
     mpmc_queue_t mpmc __attribute__((aligned(CACHE_LINE_SIZE)));
     uint64_t _pad2[7];
 
-    /* Mode: 0 = auto, 1 = force SPSC, 2 = force MPMC */
+    /* Mode: 0/2 = MPMC, 1 = SPSC. Change only when quiescent and empty. */
     int mode;
     _Atomic uint64_t use_count;
 } ull_queue_t;

@@ -40,3 +40,7 @@ env/
 
 # Benchmark outputs
 results/
+
+# Local verification output
+build/
+output/
