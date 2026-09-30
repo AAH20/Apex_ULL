@@ -1,0 +1,290 @@
+# OPA Gatekeeper constraints for ULL infrastructure
+# Enforces security policies on Kubernetes resources
+
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: ullrequiredlabels
+  annotations:
+    description: Requires ULL resources to have specific labels
+spec:
+  crd:
+    spec:
+      names:
+        kind: ULLRequiredLabels
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            labels:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package ullrequiredlabels
+
+        violation[{"msg": msg}] {
+          provided := {label | input.review.object.metadata.labels[label]}
+          required := {label | label := input.parameters.labels[_]}
+          missing := required - provided
+          count(missing) > 0
+          msg := sprintf("Missing required labels: %v", [missing])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: ullrequiredprobes
+  annotations:
+    description: Requires ULL pods to have liveness and readiness probes
+spec:
+  crd:
+    spec:
+      names:
+        kind: ULLRequiredProbes
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            probes:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package ullrequiredprobes
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          required := {probe | probe := input.parameters.probes[_]}
+          provided := {probe | probe := container[_]}
+          missing := required - provided
+          count(missing) > 0
+          msg := sprintf("Container '%v' missing required probes: %v", [container.name, missing])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: ullallowedrepos
+  annotations:
+    description: Restricts ULL container images to approved registries
+spec:
+  crd:
+    spec:
+      names:
+        kind: ULLAllowedRepos
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            repos:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package ullallowedrepos
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          not startswith(container.image, input.parameters.repos[_])
+          msg := sprintf("Container '%v' image '%v' is not from an approved registry", [container.name, container.image])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: ullrequiredresources
+  annotations:
+    description: Requires ULL containers to have resource limits
+spec:
+  crd:
+    spec:
+      names:
+        kind: ULLRequiredResources
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            limits:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package ullrequiredresources
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          required := {limit | limit := input.parameters.limits[_]}
+          provided := {limit | limit := container.resources.limits[_]}
+          missing := required - provided
+          count(missing) > 0
+          msg := sprintf("Container '%v' missing required resource limits: %v", [container.name, missing])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: ullforbiddenimages
+  annotations:
+    description: Blocks specific container images in ULL infrastructure
+spec:
+  crd:
+    spec:
+      names:
+        kind: ULLForbiddenImages
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            images:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package ullforbiddenimages
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          forbidden := input.parameters.images[_]
+          container.image == forbidden
+          msg := sprintf("Container '%v' uses forbidden image '%v'", [container.name, container.image])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: ullrequiredsecuritycontext
+  annotations:
+    description: Enforces security context on ULL pods
+spec:
+  crd:
+    spec:
+      names:
+        kind: ULLRequiredSecurityContext
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            runAsNonRoot:
+              type: boolean
+            readOnlyRootFilesystem:
+              type: boolean
+            allowPrivilegeEscalation:
+              type: boolean
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package ullrequiredsecuritycontext
+
+        violation[{"msg": msg}] {
+          input.parameters.runAsNonRoot
+          not input.review.object.spec.securityContext.runAsNonRoot
+          msg := "Pod must set securityContext.runAsNonRoot to true"
+        }
+
+        violation[{"msg": msg}] {
+          input.parameters.readOnlyRootFilesystem
+          not input.review.object.spec.securityContext.readOnlyRootFilesystem
+          msg := "Pod must set securityContext.readOnlyRootFilesystem to true"
+        }
+
+        violation[{"msg": msg}] {
+          input.parameters.allowPrivilegeEscalation
+          container := input.review.object.spec.containers[_]
+          not container.securityContext.allowPrivilegeEscalation == false
+          msg := sprintf("Container '%v' must set securityContext.allowPrivilegeEscalation to false", [container.name])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: ullrequirednetworkpolicy
+  annotations:
+    description: Requires ULL namespaces to have NetworkPolicies
+spec:
+  crd:
+    spec:
+      names:
+        kind: ULLRequiredNetworkPolicy
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package ullrequirednetworkpolicy
+
+        violation[{"msg": msg}] {
+          not input.review.object.spec.podSelector.matchLabels
+          msg := "NetworkPolicy must have a podSelector"
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: ullforbiddencapabilities
+  annotations:
+    description: Blocks dangerous Linux capabilities in ULL containers
+spec:
+  crd:
+    spec:
+      names:
+        kind: ULLForbiddenCapabilities
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            capabilities:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package ullforbiddencapabilities
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          cap := container.securityContext.capabilities.add[_]
+          forbidden := input.parameters.capabilities[_]
+          cap == forbidden
+          msg := sprintf("Container '%v' has forbidden capability '%v'", [container.name, cap])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: ullrequiredpoddisruptionbudget
+  annotations:
+    description: Requires ULL deployments to have PodDisruptionBudgets
+spec:
+  crd:
+    spec:
+      names:
+        kind: ULLRequiredPodDisruptionBudget
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            minAvailable:
+              type: integer
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package ullrequiredpoddisruptionbudget
+
+        violation[{"msg": msg}] {
+          input.review.object.kind == "Deployment"
+          not input.review.object.spec.strategy.rollingUpdate.maxUnavailable == 0
+          msg := "Deployment must have maxUnavailable set to 0 for high availability"
+        }

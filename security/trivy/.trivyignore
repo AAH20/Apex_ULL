@@ -1,0 +1,17 @@
+# Trivy ignore file for ULL infrastructure
+# Add CVEs here with justification for ignoring
+
+# Example:
+# CVE-2024-12345
+# Justification: Not applicable to our use case, waiting for upstream fix
+# Expires: 2024-12-31
+
+# Known false positives
+# CVE-2023-0001
+# Justification: False positive in base image, not exploitable in our configuration
+
+# Accepted risks (document justification and expiration date)
+# CVE-2024-00001
+# Justification: Low risk in isolated network segment
+# Expires: 2025-06-30
+# Approved-by: security-team

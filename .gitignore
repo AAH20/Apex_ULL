@@ -1,0 +1,42 @@
+# Build artifacts
+rust/target/
+cpp/src/*/build/
+cpp/src/*/CMakeFiles/
+cpp/src/*/CMakeCache.txt
+cpp/src/*/Makefile
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dylib
+*.rlib
+*.rmeta
+*.pyc
+__pycache__/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test & Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+*.prof
+*.log
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Benchmark outputs
+results/

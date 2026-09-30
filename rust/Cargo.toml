@@ -1,0 +1,31 @@
+[package]
+name = "feed-handler"
+version = "0.1.0"
+edition = "2021"
+description = "Ultra-low-latency market data feed handler with DPDK kernel bypass, crossbeam SPSC channels, and zero-copy parsing"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+crossbeam-channel = "0.5"
+bytes = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+rand = "0.8"
+
+[[bench]]
+name = "feed_handler"
+harness = false
+
+[[bench]]
+name = "matching_engine"
+harness = false
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"

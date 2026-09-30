@@ -1,0 +1,96 @@
+# Trivy configuration for ULL infrastructure
+# Scans container images, filesystems, and IaC for vulnerabilities
+
+scan:
+  # Scan types to run
+  - vuln          # Vulnerability scanning
+  - secret        # Secret scanning
+  - misconfig     # Misconfiguration scanning
+  - license       # License scanning
+
+vulnerability:
+  # Severity levels to report
+  severity:
+    - CRITICAL
+    - HIGH
+    - MEDIUM
+    - LOW
+
+  # Ignore unfixed vulnerabilities
+  ignore-unfixed: false
+
+  # CVE ignore list (add CVEs with justification)
+  ignorefile: .trivyignore
+
+secret:
+  # Secret scanning configuration
+  config:
+    # Enable built-in secret rules
+    enable-builtin-rules: true
+
+    # Custom secret rules
+    rules:
+      - id: ull-api-key
+        category: ULL
+        severity: CRITICAL
+        regex: 'ull[_-]?api[_-]?key["\s:=]+[a-zA-Z0-9]{32,}'
+        message: "ULL API key detected"
+
+      - id: ull-private-key
+        category: ULL
+        severity: CRITICAL
+        regex: '-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----'
+        message: "Private key detected"
+
+      - id: trading-credentials
+        category: ULL
+        severity: CRITICAL
+        regex: '(trading|exchange|broker)[_-]?(pass|pwd|secret)["\s:=]+[^\s]{8,}'
+        message: "Trading credentials detected"
+
+misconfig:
+  # Misconfiguration scanning
+  policy: ./security/trivy/opa-policies
+
+  # Skip specific checks
+  skip-checks:
+    - K8S_001  # We handle this with OPA
+
+license:
+  # License scanning
+  severity:
+    - CRITICAL
+    - HIGH
+
+  # Allowed licenses
+  allowed:
+    - MIT
+    - Apache-2.0
+    - BSD-3-Clause
+    - ISC
+
+  # Forbidden licenses
+  forbidden:
+    - GPL-3.0
+    - AGPL-3.0
+
+format: table
+output: trivy-report.json
+exit-code: 1
+severity-threshold: HIGH
+
+# Cache configuration
+cache:
+  dir: .trivy-cache
+  ttl: 24h
+
+# Database configuration
+db:
+  repository: ghcr.io/aquasecurity/trivy-db
+  java-repository: ghcr.io/aquasecurity/trivy-java-db
+
+# Server configuration (for client/server mode)
+server:
+  listen: 0.0.0.0:4954
+  token: ""
+  token-header: Trivy-Token

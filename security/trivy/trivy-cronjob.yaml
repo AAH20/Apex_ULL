@@ -1,0 +1,134 @@
+# Trivy CronJob for continuous security scanning
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: trivy-scanner
+  namespace: security
+  labels:
+    app: trivy
+    component: security
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        app: trivy
+        component: security
+    spec:
+      template:
+        metadata:
+          labels:
+            app: trivy
+            component: security
+        spec:
+          serviceAccountName: trivy-scanner
+          restartPolicy: OnFailure
+          containers:
+            - name: trivy
+              image: aquasec/trivy:0.55.0
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Starting Trivy scan at $(date)"
+
+                  # Scan all namespaces
+                  trivy k8s \
+                    --severity CRITICAL,HIGH \
+                    --format json \
+                    --output /reports/trivy-k8s-$(date +%Y%m%d).json \
+                    --scanners vuln,misconfig \
+                    cluster
+
+                  echo "Scan complete at $(date)"
+              volumeMounts:
+                - name: reports
+                  mountPath: /reports
+                - name: cache
+                  mountPath: /tmp/.cache
+              resources:
+                limits:
+                  cpu: "2"
+                  memory: 4Gi
+                requests:
+                  cpu: 500m
+                  memory: 1Gi
+              securityContext:
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                runAsUser: 1000
+                capabilities:
+                  drop:
+                    - ALL
+          volumes:
+            - name: reports
+              persistentVolumeClaim:
+                claimName: trivy-reports
+            - name: cache
+              emptyDir: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trivy-scanner
+  namespace: security
+  labels:
+    app: trivy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trivy-scanner
+  labels:
+    app: trivy
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "namespaces", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies", "ingresses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: trivy-scanner
+  labels:
+    app: trivy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: trivy-scanner
+subjects:
+  - kind: ServiceAccount
+    name: trivy-scanner
+    namespace: security
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trivy-reports
+  namespace: security
+  labels:
+    app: trivy
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard

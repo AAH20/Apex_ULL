@@ -1,0 +1,275 @@
+# Falco deployment for ULL infrastructure
+# Namespace: security
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: security
+  labels:
+    app.kubernetes.io/name: security
+    app.kubernetes.io/component: monitoring
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: falco
+  namespace: security
+  labels:
+    app: falco
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: falco
+  labels:
+    app: falco
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "namespaces", "services", "endpoints"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: falco
+  labels:
+    app: falco
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: falco
+subjects:
+  - kind: ServiceAccount
+    name: falco
+    namespace: security
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: falco
+  namespace: security
+  labels:
+    app: falco
+    component: security
+spec:
+  selector:
+    matchLabels:
+      app: falco
+  template:
+    metadata:
+      labels:
+        app: falco
+        component: security
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8765"
+    spec:
+      serviceAccountName: falco
+      hostNetwork: true
+      hostPID: true
+      dnsPolicy: ClusterFirstWithHostNet
+      initContainers:
+        - name: falco-driver-loader
+          image: falcosecurity/falco-driver-loader:0.38.1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: driver-src
+              mountPath: /usr/src
+            - name: boot
+              mountPath: /boot
+            - name: modules
+              mountPath: /lib/modules
+            - name: proc
+              mountPath: /host/proc
+              readOnly: true
+          env:
+            - name: FALCO_DRIVER_IGNORE_LOADED
+              value: "true"
+      containers:
+        - name: falco
+          image: falcosecurity/falco:0.38.1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+            add:
+              - SYS_ADMIN
+              - SYS_PTRACE
+              - SYS_RESOURCE
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+            requests:
+              cpu: 100m
+              memory: 512Mi
+          env:
+            - name: FALCO_BPF_PROBE
+              value: ""
+            - name: FALCO_WEBSERVER_URL
+              value: "0.0.0.0"
+            - name: FALCO_WEBSERVER_PORT
+              value: "8765"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/falco
+            - name: custom-rules
+              mountPath: /etc/falco/rules.d
+            - name: docker-socket
+              mountPath: /var/run/docker.sock
+            - name: containerd-socket
+              mountPath: /run/containerd/containerd.sock
+            - name: proc
+              mountPath: /host/proc
+              readOnly: true
+            - name: boot
+              mountPath: /boot
+              readOnly: true
+            - name: modules
+              mountPath: /lib/modules
+              readOnly: true
+            - name: usr
+              mountPath: /host/usr
+              readOnly: true
+            - name: etc
+              mountPath: /host/etc
+              readOnly: true
+            - name: logs
+              mountPath: /var/log/falco
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8765
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8765
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: falco-config
+        - name: custom-rules
+          configMap:
+            name: falco-custom-rules
+        - name: docker-socket
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+        - name: containerd-socket
+          hostPath:
+            path: /run/containerd/containerd.sock
+            type: Socket
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: boot
+          hostPath:
+            path: /boot
+        - name: modules
+          hostPath:
+            path: /lib/modules
+        - name: usr
+          hostPath:
+            path: /usr
+        - name: etc
+          hostPath:
+            path: /etc
+        - name: driver-src
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/worker
+                    operator: Exists
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-config
+  namespace: security
+data:
+  falco.yaml: |
+    rules_file:
+      - /etc/falco/falco_rules.yaml
+      - /etc/falco/falco_rules.local.yaml
+      - /etc/falco/rules.d/custom-rules.yaml
+
+    json_output: true
+    json_include_output_property: true
+    log_stderr: true
+    log_syslog: false
+    log_level: info
+
+    priority: warning
+
+    outputs:
+      output_rate: 10
+      output_max_burst: 1000
+
+    syscall_event_drops:
+      actions:
+        - log
+        - alert
+      rate: 0.03333
+      max_burst: 10
+
+    modern_bpf:
+      enabled: true
+
+    webserver:
+      enabled: true
+      port: 8765
+      prometheus_metrics_enabled: true
+
+    stdout_output:
+      enabled: true
+
+    file_output:
+      enabled: true
+      keep_alive: false
+      filename: /var/log/falco/events.log
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: falco
+  namespace: security
+  labels:
+    app: falco
+spec:
+  selector:
+    app: falco
+  ports:
+    - name: metrics
+      port: 8765
+      targetPort: 8765
+      protocol: TCP
+  type: ClusterIP

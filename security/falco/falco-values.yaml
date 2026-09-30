@@ -1,0 +1,100 @@
+# Falco Helm values for ULL infrastructure
+# Deploy with: helm install falco falcosecurity/falco -f security/falco/falco-values.yaml
+
+image:
+  repository: falcosecurity/falco
+  tag: "0.38.1"
+  pullPolicy: IfNotPresent
+
+docker:
+  socket: /var/run/docker.sock
+
+containerd:
+  enabled: true
+  socket: /run/containerd/containerd.sock
+
+kubernetes:
+  enabled: true
+
+falco:
+  rules_file:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/rules.d/custom-rules.yaml
+
+  json_output: true
+  json_include_output_property: true
+  log_stderr: true
+  log_syslog: false
+  log_level: info
+
+  priority: warning
+
+  outputs:
+    output_rate: 10
+    output_max_burst: 1000
+
+  syscall_event_drops:
+    actions:
+      - log
+      - alert
+    rate: 0.03333
+    max_burst: 10
+
+  syscall_event_timeouts:
+    max_concurrent: 1000
+
+  modern_bpf:
+    enabled: true
+
+  webserver:
+    enabled: true
+    port: 8765
+    prometheus_metrics_enabled: true
+
+  program_output:
+    enabled: true
+    keep_alive: false
+    program: |
+      curl -s -X POST http://ull-alert-manager:9093/api/v1/alerts \
+        -H "Content-Type: application/json" \
+        -d '[{
+          "labels": {
+            "alertname": "FalcoAlert",
+            "severity": "{{ .priority }}",
+            "source": "falco",
+            "ull_component": "{{ .output_fields.proc.name }}"
+          },
+          "annotations": {
+            "summary": "{{ .output }}",
+            "description": "Falco detected suspicious activity in ULL infrastructure"
+          }
+        }]'
+
+  file_output:
+    enabled: true
+    keep_alive: false
+    filename: /var/log/falco/events.log
+
+  stdout_output:
+    enabled: true
+
+controller:
+  daemonset:
+    updateStrategy:
+      type: RollingUpdate
+
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 100m
+      memory: 512Mi
+
+customRules:
+  custom-rules.yaml: |
+    # Custom rules are in falco-rules-custom.yaml
+    # This file is mounted from the ConfigMap
+
+tty: false

@@ -1,0 +1,224 @@
+{
+  "metadata": {
+    "framework": "ULL Power Evaluation Framework",
+    "version": "1.0",
+    "date": "2026-09-29",
+    "description": "Standardized power evaluation data for ultra-low-latency infrastructure"
+  },
+  "carbon_intensity_gco2e_per_kwh": {
+    "norway": 20,
+    "france": 50,
+    "quebec": 30,
+    "california": 200,
+    "new_york": 250,
+    "texas": 400,
+    "singapore": 450,
+    "hong_kong": 500,
+    "japan": 450,
+    "germany": 350,
+    "india": 600,
+    "china": 550,
+    "global_average": 450
+  },
+  "pue_by_facility": {
+    "hyperscale": 1.15,
+    "colocation": 1.45,
+    "enterprise": 1.7,
+    "edge": 1.1,
+    "hft_colocation": 1.3
+  },
+  "fpga_platforms": [
+    {
+      "name": "AMD Versal AI Edge",
+      "process": "7nm",
+      "power_watts": 40,
+      "power_range": "15-75W",
+      "latency": "sub-µs",
+      "category": "FPGA",
+      "source": "AMD product brief"
+    },
+    {
+      "name": "Intel Agilex 7",
+      "process": "10nm SuperFin",
+      "power_watts": 60,
+      "power_range": "10-100W+",
+      "latency": "sub-µs",
+      "category": "FPGA",
+      "source": "Intel datasheet"
+    },
+    {
+      "name": "Lattice Nexus",
+      "process": "28nm FD-SOI",
+      "power_watts": 2,
+      "power_range": "<1W-5W",
+      "latency": "<500ns",
+      "category": "FPGA",
+      "source": "Lattice whitepaper"
+    },
+    {
+      "name": "Microchip PolarFire",
+      "process": "28nm NV",
+      "power_watts": 3.5,
+      "power_range": "3.5W typical",
+      "latency": "sub-µs",
+      "category": "FPGA",
+      "source": "Microchip datasheet"
+    },
+    {
+      "name": "Achronix Speedster7t",
+      "process": "7nm",
+      "power_watts": 100,
+      "power_range": "50-150W+",
+      "latency": "sub-µs",
+      "category": "FPGA",
+      "source": "Achronix datasheet"
+    },
+    {
+      "name": "Flex Logix eFPGA",
+      "process": "12-40nm",
+      "power_watts": 0.5,
+      "power_range": "5-10× lower than discrete",
+      "latency": "1-2 cycles",
+      "category": "eFPGA",
+      "source": "Flex Logix brief"
+    }
+  ],
+  "network_platforms": [
+    {
+      "name": "P4 Switch (Tofino, 64-port)",
+      "power_watts": 270,
+      "power_per_port": 4.2,
+      "latency": "100-500ns",
+      "throughput": "6.5-12.8 Tb/s",
+      "category": "Switch",
+      "source": "Intel"
+    },
+    {
+      "name": "InfiniBand NDR Switch",
+      "power_watts": 150,
+      "latency": "100-200ns",
+      "throughput": "400-800 Gb/s",
+      "category": "Switch",
+      "source": "NVIDIA"
+    },
+    {
+      "name": "100GbE NIC (DPDK)",
+      "power_watts": 25,
+      "latency": "1-10µs",
+      "throughput": "100M pkt/s",
+      "category": "NIC",
+      "source": "DPDK"
+    },
+    {
+      "name": "ConnectX-7 RoCE",
+      "power_watts": 30,
+      "latency": "1-3µs",
+      "throughput": "370M msg/s",
+      "category": "NIC",
+      "source": "NVIDIA"
+    },
+    {
+      "name": "BlueField-3 DPU",
+      "power_watts": 100,
+      "power_range": "75-150W",
+      "latency": "1-5µs",
+      "throughput": "400 Gb/s",
+      "category": "DPU",
+      "source": "NVIDIA"
+    },
+    {
+      "name": "Intel IPU E2100",
+      "power_watts": 25,
+      "power_range": "20-30W",
+      "latency": "~2µs RTT",
+      "throughput": "200 Gb/s",
+      "category": "IPU",
+      "source": "Intel"
+    },
+    {
+      "name": "AMD Pensando Salina",
+      "power_watts": 50,
+      "latency": "—",
+      "throughput": "400 Gb/s",
+      "category": "DPU",
+      "source": "AMD"
+    }
+  ],
+  "cpu_gpu_platforms": [
+    {
+      "name": "Intel Xeon 8480+",
+      "power_watts": 350,
+      "cores": 56,
+      "category": "CPU",
+      "source": "Intel"
+    },
+    {
+      "name": "AMD EPYC 9654",
+      "power_watts": 360,
+      "cores": 96,
+      "category": "CPU",
+      "source": "AMD"
+    },
+    {
+      "name": "NVIDIA H100 SXM",
+      "power_watts": 700,
+      "category": "GPU",
+      "source": "NVIDIA"
+    },
+    {
+      "name": "NVIDIA L40S",
+      "power_watts": 300,
+      "category": "GPU",
+      "source": "NVIDIA"
+    }
+  ],
+  "benchmarks": {
+    "watts_per_operation": [
+      {"platform": "Lattice Nexus FPGA", "power_w": 2, "ops_s": 100000000, "w_per_op": "20p", "ops_per_j": "50G"},
+      {"platform": "Intel Agilex 7 FPGA", "power_w": 60, "ops_s": 2000000000, "w_per_op": "30p", "ops_per_j": "33G"},
+      {"platform": "AMD Versal AI Edge", "power_w": 40, "ops_s": 150000, "w_per_op": "267p", "ops_per_j": "3.75G"},
+      {"platform": "Microchip PolarFire", "power_w": 3.5, "ops_s": 50000000, "w_per_op": "70p", "ops_per_j": "14G"},
+      {"platform": "Intel Xeon 8480+", "power_w": 350, "ops_s": 500000000000, "w_per_op": "700p", "ops_per_j": "1.4G"},
+      {"platform": "NVIDIA H100", "power_w": 700, "ops_s": 1000000000000000, "w_per_op": "700p", "ops_per_j": "1.4P"}
+    ],
+    "watts_per_message": [
+      {"platform": "P4 Switch", "power_w": 270, "msg_s": 4800000000, "w_per_msg": "56p", "msg_per_j": "17.8G"},
+      {"platform": "InfiniBand NDR", "power_w": 150, "msg_s": 330000000, "w_per_msg": "455p", "msg_per_j": "2.2G"},
+      {"platform": "DPDK 100G NIC", "power_w": 25, "msg_s": 100000000, "w_per_msg": "250p", "msg_per_j": "4G"},
+      {"platform": "ConnectX-7 RoCE", "power_w": 30, "msg_s": 370000000, "w_per_msg": "81p", "msg_per_j": "12.3G"},
+      {"platform": "BlueField-3 DPU", "power_w": 100, "msg_s": 80000000, "w_per_msg": "1.25n", "msg_per_j": "800M"}
+    ]
+  },
+  "examples": {
+    "fpga_tick_to_trade": {
+      "description": "FPGA-based HFT order processing",
+      "device_power_w": 40,
+      "pue": 1.3,
+      "carbon_intensity": 450,
+      "throughput_ops_s": 150000,
+      "total_power_w": 52,
+      "energy_per_op_j": "347µ",
+      "carbon_per_op_gco2e": "43.4n"
+    },
+    "dpdk_packet_processing": {
+      "description": "DPDK 100GbE packet forwarding",
+      "device_power_w": 25,
+      "pue": 1.15,
+      "carbon_intensity": 200,
+      "throughput_msg_s": 100000000,
+      "total_power_w": 28.75,
+      "energy_per_msg_j": "287.5p",
+      "carbon_per_msg_gco2e": "15.97p"
+    },
+    "ai_inference_gpu": {
+      "description": "NVIDIA L40S AI inference",
+      "device_power_w": 300,
+      "pue": 1.15,
+      "carbon_intensity": 450,
+      "throughput_flop_s": 360000000000000,
+      "total_power_w": 345,
+      "energy_per_flop_j": "958p",
+      "carbon_per_flop_gco2e": "119.8n"
+    }
+  }
+}

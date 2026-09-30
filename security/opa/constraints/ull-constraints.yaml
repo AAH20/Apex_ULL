@@ -1,0 +1,196 @@
+# OPA Gatekeeper constraints for ULL infrastructure
+# These are the actual constraint instances that enforce the templates
+
+# Require ULL resources to have specific labels
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ULLRequiredLabels
+metadata:
+  name: ull-must-have-labels
+  namespace: security
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod", "Service", "ConfigMap", "Secret"]
+    labelSelector:
+      matchExpressions:
+        - key: app.kubernetes.io/name
+          operator: Exists
+  parameters:
+    labels:
+      - app.kubernetes.io/name
+      - app.kubernetes.io/component
+      - app.kubernetes.io/part-of
+      - app.kubernetes.io/managed-by
+---
+# Require ULL pods to have liveness and readiness probes
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ULLRequiredProbes
+metadata:
+  name: ull-must-have-probes
+  namespace: security
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    labelSelector:
+      matchExpressions:
+        - key: app.kubernetes.io/part-of
+          operator: In
+          values: ["ull"]
+  parameters:
+    probes:
+      - livenessProbe
+      - readinessProbe
+---
+# Restrict ULL container images to approved registries
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ULLAllowedRepos
+metadata:
+  name: ull-restricted-repos
+  namespace: security
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    labelSelector:
+      matchExpressions:
+        - key: app.kubernetes.io/part-of
+          operator: In
+          values: ["ull"]
+  parameters:
+    repos:
+      - "ghcr.io/ull/"
+      - "registry.ull.internal/"
+      - "aquasec/"
+      - "falcosecurity/"
+---
+# Require ULL containers to have resource limits
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ULLRequiredResources
+metadata:
+  name: ull-must-have-resources
+  namespace: security
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    labelSelector:
+      matchExpressions:
+        - key: app.kubernetes.io/part-of
+          operator: In
+          values: ["ull"]
+  parameters:
+    limits:
+      - cpu
+      - memory
+---
+# Block specific container images
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ULLForbiddenImages
+metadata:
+  name: ull-forbidden-images
+  namespace: security
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    labelSelector:
+      matchExpressions:
+        - key: app.kubernetes.io/part-of
+          operator: In
+          values: ["ull"]
+  parameters:
+    images:
+      - "ubuntu:latest"
+      - "alpine:latest"
+      - "debian:latest"
+      - "node:latest"
+      - "python:latest"
+---
+# Enforce security context on ULL pods
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ULLRequiredSecurityContext
+metadata:
+  name: ull-security-context
+  namespace: security
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    labelSelector:
+      matchExpressions:
+        - key: app.kubernetes.io/part-of
+          operator: In
+          values: ["ull"]
+  parameters:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+---
+# Block dangerous Linux capabilities
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ULLForbiddenCapabilities
+metadata:
+  name: ull-forbidden-capabilities
+  namespace: security
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    labelSelector:
+      matchExpressions:
+        - key: app.kubernetes.io/part-of
+          operator: In
+          values: ["ull"]
+  parameters:
+    capabilities:
+      - SYS_ADMIN
+      - SYS_PTRACE
+      - SYS_MODULE
+      - NET_ADMIN
+      - NET_RAW
+      - IPC_LOCK
+      - ALL
+---
+# Require ULL deployments to have PodDisruptionBudgets
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ULLRequiredPodDisruptionBudget
+metadata:
+  name: ull-pdb-required
+  namespace: security
+spec:
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment"]
+    labelSelector:
+      matchExpressions:
+        - key: app.kubernetes.io/part-of
+          operator: In
+          values: ["ull"]
+  parameters:
+    minAvailable: 1
+---
+# Require ULL namespaces to have NetworkPolicies
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ULLRequiredNetworkPolicy
+metadata:
+  name: ull-network-policy-required
+  namespace: security
+spec:
+  match:
+    kinds:
+      - apiGroups: ["networking.k8s.io"]
+        kinds: ["NetworkPolicy"]
+    labelSelector:
+      matchExpressions:
+        - key: app.kubernetes.io/part-of
+          operator: In
+          values: ["ull"]

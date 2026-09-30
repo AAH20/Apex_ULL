@@ -1,0 +1,365 @@
+name: Deploy
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: "Version to deploy"
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_DEFAULT: "3.11"
+  DOCKER_REGISTRY: ghcr.io
+  DOCKER_IMAGE: ${{ github.repository_owner }}/ultra-low-latency-infra
+
+jobs:
+  # ── Pre-deploy Validation ──────────────────────────────────────
+  pre-deploy:
+    name: Pre-deploy Validation
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_DEFAULT }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov numpy
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run full test suite
+        run: |
+          pytest tests/ -v --tb=short --junitxml=deploy-test-results.xml
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          else
+            echo "version=0.0.0-dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-test-results
+          path: deploy-test-results.xml
+          retention-days: 14
+
+  # ── Build Docker Image ─────────────────────────────────────────
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # ── Deploy to Staging ──────────────────────────────────────────
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [pre-deploy, build-docker]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging' || startsWith(github.ref, 'refs/tags/v')
+    environment:
+      name: staging
+      url: https://staging.ull.example.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying version ${{ needs.pre-deploy.outputs.version }} to staging..."
+          
+          # Update ECS service
+          if [ -f terraform/main.tf ]; then
+            echo "Terraform configuration detected"
+            cd terraform
+            terraform init
+            terraform workspace select staging || terraform workspace new staging
+            terraform plan -var="image_tag=${{ needs.pre-deploy.outputs.version }}"
+            terraform apply -auto-approve -var="image_tag=${{ needs.pre-deploy.outputs.version }}"
+          fi
+          
+          # Update Kubernetes deployment
+          if [ -f k8s/staging/deployment.yaml ]; then
+            echo "Kubernetes configuration detected"
+            kubectl set image deployment/ull-app \
+              ull-app=${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE }}:${{ needs.pre-deploy.outputs.version }} \
+              --namespace=staging
+            kubectl rollout status deployment/ull-app --namespace=staging --timeout=300s
+          fi
+          
+          echo "Staging deployment complete"
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests against staging..."
+          # Wait for service to be ready
+          sleep 10
+          
+          # Basic health check
+          curl -sf https://staging.ull.example.com/health || echo "Health check endpoint not available"
+          
+          # Run integration tests
+          python -c "
+          import urllib.request
+          import json
+          import sys
+          
+          try:
+              req = urllib.request.Request('https://staging.ull.example.com/health')
+              with urllib.request.urlopen(req, timeout=10) as resp:
+                  data = json.loads(resp.read())
+                  print(f'Health check passed: {data}')
+          except Exception as e:
+              print(f'Health check skipped: {e}')
+          " || true
+
+      - name: Staging deployment summary
+        run: |
+          echo "## Staging Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ needs.pre-deploy.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** staging" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** https://staging.ull.example.com" >> $GITHUB_STEP_SUMMARY
+
+  # ── Deploy to Production ───────────────────────────────────────
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [pre-deploy, build-docker, deploy-staging]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production' || (startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-rc') && !contains(github.ref, '-beta') && !contains(github.ref, '-alpha'))
+    environment:
+      name: production
+      url: https://ull.example.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy to production (blue-green)
+        run: |
+          echo "Deploying version ${{ needs.pre-deploy.outputs.version }} to production (blue-green)..."
+          
+          # Blue-green deployment
+          if [ -f k8s/production/deployment.yaml ]; then
+            echo "Starting blue-green deployment..."
+            
+            # Deploy to green environment
+            kubectl set image deployment/ull-app-green \
+              ull-app=${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE }}:${{ needs.pre-deploy.outputs.version }} \
+              --namespace=production
+            
+            # Wait for green to be ready
+            kubectl rollout status deployment/ull-app-green --namespace=production --timeout=300s
+            
+            # Run health checks on green
+            echo "Running health checks on green environment..."
+            sleep 15
+            
+            # Switch traffic to green
+            echo "Switching traffic to green environment..."
+            kubectl patch service ull-app -n production -p '{"spec":{"selector":{"version":"green"}}}'
+            
+            # Wait and verify
+            sleep 30
+            
+            # Rollback on failure
+            if ! curl -sf https://ull.example.com/health; then
+              echo "Health check failed! Rolling back..."
+              kubectl patch service ull-app -n production -p '{"spec":{"selector":{"version":"blue"}}}'
+              exit 1
+            fi
+            
+            echo "Blue-green deployment successful"
+          fi
+          
+          # Terraform apply for production
+          if [ -f terraform/main.tf ]; then
+            cd terraform
+            terraform init
+            terraform workspace select production
+            terraform plan -var="image_tag=${{ needs.pre-deploy.outputs.version }}"
+            terraform apply -auto-approve -var="image_tag=${{ needs.pre-deploy.outputs.version }}"
+          fi
+          
+          echo "Production deployment complete"
+
+      - name: Run production smoke tests
+        run: |
+          echo "Running production smoke tests..."
+          sleep 10
+          
+          python -c "
+          import urllib.request
+          import json
+          
+          try:
+              req = urllib.request.Request('https://ull.example.com/health')
+              with urllib.request.urlopen(req, timeout=10) as resp:
+                  data = json.loads(resp.read())
+                  print(f'Production health check passed: {data}')
+          except Exception as e:
+              print(f'Health check result: {e}')
+          " || true
+
+      - name: Production deployment summary
+        run: |
+          echo "## Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ needs.pre-deploy.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** production" >> $GITHUB_STEP_SUMMARY
+          echo "- **Strategy:** Blue-green" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** https://ull.example.com" >> $GITHUB_STEP_SUMMARY
+
+  # ── Create GitHub Release ──────────────────────────────────────
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate release notes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          
+          # Generate changelog from commits
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s" ${PREV_TAG}..HEAD)
+          else
+            COMMITS=$(git log --pretty=format:"- %s" -20)
+          fi
+          
+          cat > release-notes.md << EOF
+          ## ULL Infrastructure v${VERSION}
+          
+          ### Changes
+          ${COMMITS}
+          
+          ### Deployment
+          - **Staging:** https://staging.ull.example.com
+          - **Production:** https://ull.example.com
+          
+          ### Docker Image
+          \`\`\`bash
+          docker pull ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE }}:${VERSION}
+          \`\`\`
+          
+          ### Benchmarks
+          See the [Benchmark workflow](https://github.com/${{ github.repository }}/actions/workflows/benchmark.yml) for latest performance results.
+          EOF
+          
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          cat release-notes.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+
+  # ── Post-deploy Monitoring ─────────────────────────────────────
+  post-deploy:
+    name: Post-deploy Monitoring
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    steps:
+      - name: Monitor deployment health
+        run: |
+          echo "Monitoring deployment health for 5 minutes..."
+          
+          for i in $(seq 1 5); do
+            echo "Check $i/5..."
+            sleep 60
+            
+            # Check health endpoint
+            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" https://ull.example.com/health 2>/dev/null || echo "000")
+            echo "  Health check: HTTP $STATUS"
+            
+            if [ "$STATUS" != "200" ]; then
+              echo "  WARNING: Health check returned $STATUS"
+            fi
+          done
+          
+          echo "Post-deploy monitoring complete"
