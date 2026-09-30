@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex Platform — Commercial Offering Architecture</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #7ee787;
+    --accent3: #d2a8ff;
+    --accent4: #ffa657;
+    --accent5: #ff7b72;
+    --free: #3fb950;
+    --pro: #58a6ff;
+    --ent: #d2a8ff;
+    --custom: #ffa657;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    padding: 2rem;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  header {
+    text-align: center;
+    padding: 3rem 0 2rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+  header h1 {
+    font-size: 2.5rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+  }
+  header p { color: var(--text-muted); font-size: 1.1rem; }
+  .badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 0.25rem;
+  }
+  .badge-free { background: rgba(63,185,80,0.15); color: var(--free); border: 1px solid var(--free); }
+  .badge-pro { background: rgba(88,166,255,0.15); color: var(--pro); border: 1px solid var(--pro); }
+  .badge-ent { background: rgba(210,168,255,0.15); color: var(--ent); border: 1px solid var(--ent); }
+  .badge-custom { background: rgba(255,166,87,0.15); color: var(--custom); border: 1px solid var(--custom); }
+  section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+  section h2 {
+    color: var(--accent);
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  section h2 .num {
+    background: var(--accent);
+    color: var(--bg);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+  .mermaid {
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+  }
+  .mermaid svg { max-width: 100%; }
+  .tier-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .tier-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+  .tier-card h3 { margin-bottom: 0.5rem; }
+  .tier-card .price { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; }
+  .tier-card ul { list-style: none; padding: 0; }
+  .tier-card li { padding: 0.25rem 0; color: var(--text-muted); font-size: 0.9rem; }
+  .tier-card li::before { content: "✓ "; color: var(--accent2); }
+  .tier-card.free { border-top: 3px solid var(--free); }
+  .tier-card.free .price { color: var(--free); }
+  .tier-card.pro { border-top: 3px solid var(--pro); }
+  .tier-card.pro .price { color: var(--pro); }
+  .tier-card.ent { border-top: 3px solid var(--ent); }
+  .tier-card.ent .price { color: var(--ent); }
+  .tier-card.custom { border-top: 3px solid var(--custom); }
+  .tier-card.custom .price { color: var(--custom); }
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .stat-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+  .stat-box .value { font-size: 2rem; font-weight: 700; color: var(--accent); }
+  .stat-box .label { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem; }
+  footer {
+    text-align: center;
+    padding: 2rem 0;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+  .mermaid .node rect, .mermaid .node polygon, .mermaid .node circle {
+    rx: 8;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Apex Platform</h1>
+  <p>Unified AI Infrastructure &amp; Ultra-Latency Computing — Commercial Offering Architecture</p>
+  <div style="margin-top:1rem;">
+    <span class="badge badge-free">Free / OSS</span>
+    <span class="badge badge-pro">Professional $99/mo</span>
+    <span class="badge badge-ent">Enterprise $999/mo</span>
+    <span class="badge badge-custom">Custom / Contact</span>
+  </div>
+</header>
+
+<!-- 1. Commercial Offering Overview -->
+<section>
+  <h2><span class="num">1</span> Commercial Offering Overview</h2>
+  <p style="color:var(--text-muted);margin-bottom:1rem;">The Apex Platform unifies 120+ OSS projects into a coherent commercial layer with four tiers.</p>
+  <div class="mermaid">
+flowchart TD
+    AP["🚀 Apex Platform<br/>Unified AI Infrastructure<br/>& Ultra-Latency Computing"]
+    AP --> FREE["Free Tier<br/>All OSS Projects"]
+    AP --> PRO["Professional<br/>$99/mo"]
+    AP --> ENT["Enterprise<br/>$999/mo"]
+    AP --> CUST["Custom<br/>Contact Sales"]
+    FREE --> F1["120+ OSS Projects"]
+    FREE --> F2["Community Support"]
+    FREE --> F3["Basic Workflows"]
+    PRO --> P1["Priority Support"]
+    PRO --> P2["Pre-built Workflows"]
+    PRO --> P3["Advanced Integrations"]
+    ENT --> E1["Custom Development"]
+    ENT --> E2["SLA & Dedicated Support"]
+    ENT --> E3["White-label Ready"]
+    CUST --> C1["OEM Licensing"]
+    CUST --> C2["Full White-label"]
+    CUST --> C3["Bespoke Solutions"]
+  </div>
+</section>
+
+<!-- 2. Tier Features -->
+<section>
+  <h2><span class="num">2</span> Tier Features Breakdown</h2>
+  <div class="tier-grid">
+    <div class="tier-card free">
+      <h3>Free / OSS</h3>
+      <div class="price">$0</div>
+      <ul>
+        <li>All 120+ OSS projects</li>
+        <li>Community Discord support</li>
+        <li>Basic workflow templates</li>
+        <li>Public documentation</li>
+        <li>Self-hosted deployment</li>
+      </ul>
+    </div>
+    <div class="tier-card pro">
+      <h3>Professional</h3>
+      <div class="price">$99/mo</div>
+      <ul>
+        <li>Everything in Free</li>
+        <li>Priority email support</li>
+        <li>Pre-built workflow library</li>
+        <li>Advanced integrations</li>
+        <li>Team collaboration (5 seats)</li>
+        <li>Cloud hosting option</li>
+      </ul>
+    </div>
+    <div class="tier-card ent">
+      <h3>Enterprise</h3>
+      <div class="price">$999/mo</div>
+      <ul>
+        <li>Everything in Professional</li>
+        <li>Custom development</li>
+        <li>99.9% SLA</li>
+        <li>Dedicated support engineer</li>
+        <li>Unlimited seats</li>
+        <li>White-label dashboard</li>
+        <li>On-premise deployment</li>
+      </ul>
+    </div>
+    <div class="tier-card custom">
+      <h3>Custom</h3>
+      <div class="price">Contact</div>
+      <ul>
+        <li>Everything in Enterprise</li>
+        <li>OEM licensing</li>
+        <li>Full white-label / rebrand</li>
+        <li>Bespoke feature development</li>
+        <li>Multi-region deployment</li>
+        <li>Custom SLA terms</li>
+        <li>Partner revenue sharing</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Integration Points -->
+<section>
+  <h2><span class="num">3</span> Integration Points Between Projects</h2>
+  <p style="color:var(--text-muted);margin-bottom:1rem;">How the 120+ OSS projects connect through the Apex Platform unified layer.</p>
+  <div class="mermaid">
+flowchart TD
+    subgraph Core["Apex Platform Core"]
+      API["Unified API Gateway"]
+      AUTH["Auth & Identity"]
+      BUS["Event Bus / Broker"]
+    end
+    subgraph Compute["Compute Layer"]
+      ULL["Ultra-Latency Engine"]
+      DIST["Distributed Runtime"]
+      GPU["GPU Scheduler"]
+    end
+    subgraph AI["AI/ML Layer"]
+      LLMO["LLM Orchestrator"]
+      AGENT["Agent Framework"]
+      RAG["RAG Pipeline"]
+    end
+    subgraph Data["Data Layer"]
+      VEC["Vector Store"]
+      CACHE["Distributed Cache"]
+      QUEUE["Message Queue"]
+    end
+    subgraph DevOps["DevOps Layer"]
+      CI["CI/CD Pipeline"]
+      MON["Monitoring"]
+      SEC["Security Scan"]
+    end
+    API --> BUS
+    AUTH --> BUS
+    BUS --> ULL
+    BUS --> LLMO
+    BUS --> VEC
+    ULL --> DIST
+    ULL --> GPU
+    LLMO --> AGENT
+    LLMO --> RAG
+    RAG --> VEC
+    VEC --> CACHE
+    CACHE --> QUEUE
+    CI --> MON
+    MON --> SEC
+  </div>
+</section>
+
+<!-- 4. Go-to-Market Motion -->
+<section>
+  <h2><span class="num">4</span> Go-to-Market Motion</h2>
+  <div class="stats-row">
+    <div class="stat-box"><div class="value">12</div><div class="label">Squads</div></div>
+    <div class="stat-box"><div class="value">330</div><div class="label">Agent Slots</div></div>
+    <div class="stat-box"><div class="value">1</div><div class="label">Broker Channel</div></div>
+    <div class="stat-box"><div class="value">120+</div><div class="label">OSS Projects</div></div>
+  </div>
+  <div class="mermaid">
+flowchart TD
+    GTM["🎯 Go-to-Market Motion"]
+    GTM --> SQ["12 Squads<br/>Cross-functional Teams"]
+    GTM --> SL["330 Agent Slots<br/>Autonomous Workers"]
+    GTM --> BC["Broker Channel<br/>Marketplace"]
+    SQ --> SQ1["Squad 1-4: Core Platform"]
+    SQ --> SQ2["Squad 5-8: AI/ML"]
+    SQ --> SQ3["Squad 9-12: Growth"]
+    SL --> SL1["110 Agents: Compute"]
+    SL --> SL2["110 Agents: AI/ML"]
+    SL --> SL3["110 Agents: DevOps"]
+    BC --> BC1["Workflow Marketplace"]
+    BC --> BC2["Integration Catalog"]
+    BC --> BC3["Partner Plugins"]
+    BC1 --> REV1["Revenue: Listing Fees"]
+    BC2 --> REV2["Revenue: Referral %"]
+    BC3 --> REV3["Revenue: Rev Share"]
+  </div>
+</section>
+
+<!-- 5. Revenue Model -->
+<section>
+  <h2><span class="num">5</span> Revenue Model</h2>
+  <p style="color:var(--text-muted);margin-bottom:1rem;">Target: ~$30K MRR through diversified revenue streams.</p>
+  <div class="mermaid">
+flowchart TD
+    RM["💰 Revenue Model<br/>Target: $30K MRR"]
+    RM --> SUB["Subscription Revenue"]
+    RM --> SERV["Services Revenue"]
+    RM --> PLAT["Platform Revenue"]
+    SUB --> SUB1["Professional: $99/mo<br/>~100 customers = $9.9K"]
+    SUB --> SUB2["Enterprise: $999/mo<br/>~15 customers = $15K"]
+    SUB --> SUB3["Custom: Variable<br/>~3 clients = $5K+"]
+    SERV --> SERV1["Custom Development<br/>Project-based"]
+    SERV --> SERV2["Consulting & Training<br/>Hourly/Retainer"]
+    SERV --> SERV3["SLA Overages<br/>Usage-based"]
+    PLAT --> PLAT1["Broker Channel Fees<br/>15% commission"]
+    PLAT --> PLAT2["OEM Licensing<br/>Annual contracts"]
+    PLAT --> PLAT3["Marketplace Listings<br/>One-time + recurring"]
+  </div>
+</section>
+
+<!-- 6. Class Diagram -->
+<section>
+  <h2><span class="num">6</span> Platform Class Architecture</h2>
+  <div class="mermaid">
+classDiagram
+    class ApexPlatform {
+        +String name
+        +String domain
+        +List~Tier~ tiers
+        +List~Project~ projects
+        +BrokerChannel broker
+        +void deploy()
+        +void scale()
+    }
+    class Tier {
+        +String name
+        +Float price
+        +List~Feature~ features
+        +List~Limit~ limits
+        +Boolean isOSS()
+        +Boolean hasSupport()
+    }
+    class Feature {
+        +String name
+        +String description
+        +Boolean enabled
+        +String tierAccess
+    }
+    class Project {
+        +String name
+        +String repo
+        +String category
+        +Boolean isOSS
+        +void integrate()
+    }
+    class BrokerChannel {
+        +String name
+        +List~Listing~ listings
+        +Float commissionRate
+        +void publish()
+        +void transact()
+    }
+    class Squad {
+        +String name
+        +Int agentSlots
+        +String focus
+        +void execute()
+    }
+    class AgentSlot {
+        +String id
+        +String type
+        +String status
+        +void run()
+        +void stop()
+    }
+    ApexPlatform "1" --> "*" Tier : contains
+    ApexPlatform "1" --> "*" Project : unifies
+    ApexPlatform "1" --> "1" BrokerChannel : operates
+    ApexPlatform "1" --> "12" Squad : staffed by
+    Squad "1" --> "*" AgentSlot : allocates
+    Tier "1" --> "*" Feature : includes
+    Tier "1" --> "*" Limit : enforces
+  </div>
+</section>
+
+<!-- 7. Revenue Projection Flowchart -->
+<section>
+  <h2><span class="num">7</span> Revenue Projection &amp; Growth Path</h2>
+  <div class="mermaid">
+flowchart TD
+    NOW["Current State<br/>120+ OSS Projects"]
+    NOW --> PHASE1["Phase 1: Foundation<br/>Launch Free + Professional"]
+    PHASE1 --> PHASE2["Phase 2: Scale<br/>Enterprise + Broker Channel"]
+    PHASE2 --> PHASE3["Phase 3: Expand<br/>Custom + OEM + Global"]
+    PHASE1 --> R1["$5K MRR<br/>~50 Pro subscribers"]
+    PHASE2 --> R2["$15K MRR<br/>+10 Enterprise + Broker fees"]
+    PHASE2 --> R3["$30K MRR<br/>+15 Enterprise + Custom + OEM"]
+    PHASE3 --> R4["$50K+ MRR<br/>Full platform maturity"]
+    R1 --> METRIC1["CAC: $50"]
+    R2 --> METRIC2["LTV: $1,200"]
+    R3 --> METRIC3["Churn: <5%"]
+    R4 --> METRIC4["NPS: 60+"]
+  </div>
+</section>
+
+<footer>
+  <p>Apex Platform — Unified AI Infrastructure &amp; Ultra-Latency Computing</p>
+  <p>Domain: a2zsoc.com · 12 Squads · 330 Agent Slots · 120+ OSS Projects</p>
+  <p style="margin-top:0.5rem;opacity:0.6;">Generated for commercial strategy documentation</p>
+</footer>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      darkMode: true,
+      background: '#0d1117',
+      primaryColor: '#1f6feb',
+      primaryTextColor: '#c9d1d9',
+      primaryBorderColor: '#30363d',
+      lineColor: '#58a6ff',
+      secondaryColor: '#161b22',
+      tertiaryColor: '#21262d',
+      fontSize: '14px',
+      nodeBorder: '#58a6ff',
+      clusterBkg: '#161b22',
+      clusterBorder: '#30363d',
+      titleColor: '#c9d1d9',
+      edgeLabelBackground: '#161b22'
+    },
+    flowchart: {
+      htmlLabels: true,
+      curve: 'basis',
+      nodeSpacing: 50,
+      rankSpacing: 60
+    },
+    classDiagram: {
+      htmlLabels: true
+    }
+  });
+</script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 > **Reference architecture and implementation toolkit for systems where every nanosecond counts.**
 > Spanning FPGA fabric, kernel bypass, RDMA, DPU offload, and application software across HFT, payments, gaming, and data center networking.
 
-**Version:** 1.0 · **Date:** September 2026 · **License:** MIT · **Author:** Ahmed Hassan
+**Version:** 1.0 · **Date:** September 2026 · **License:** AGPL-3.0 · **Author:** Ahmed Hassan
 
 ---
 
@@ -657,13 +657,141 @@ python benchmarks/stac/run_all.py --output results.json --save-baseline  # Save 
 
 ---
 
-## 9. License
+## 9. Commercial Offering
 
-MIT License — Copyright (c) 2026 ULL Infrastructure Contributors.
+Apex_ULL is part of the **Apex Platform** — a unified commercial layer that connects all of Ahmed Hassan's open-source projects into a coherent offering.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, subject to the condition that the above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+### Apex Platform Tiers
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+| Tier | Price | Features |
+|------|-------|----------|
+| **Free** | $0 | All OSS projects, community support, self-service docs |
+| **Professional** | $99/mo | + Pre-built workflows, + Priority support, + CI/CD templates |
+| **Enterprise** | $999/mo | + Custom development, + SLA (99.9%), + Dedicated support, + Private repos |
+| **Custom** | Contact | + White-label, + OEM licensing, + On-prem deployment, + Training |
+
+### Apex Platform Architecture
+
+```mermaid
+flowchart TD
+    subgraph Commercial["Apex Platform — Commercial Layer"]
+        Free["Free Tier\nAll OSS Projects"]
+        Pro["Professional\n$99/mo"]
+        Ent["Enterprise\n$999/mo"]
+        Custom["Custom\nContact"]
+    end
+
+    subgraph Core["Apex_ULL — Ultra-Low Latency"]
+        CPP["C++20\nFeed Handler, Matching\nOrder Book, Risk"]
+        Rust["Rust\nMatching, Order Book\nSignal, Compliance"]
+        Python["Python Kernels\nScheduling, Partitioning\nRouting, Evaluation"]
+    end
+
+    subgraph Ecosystem["Apex Ecosystem"]
+        AGS["ApexGraphSwarm\nGraph Intelligence"]
+        GRC["GRC_Claw\nISO 42001 Governance"]
+        DCC["Data Center Commander\nDC Lifecycle"]
+        MC["Apex Memory Context\nCognee + Nerve + Laya"]
+    end
+
+    subgraph FinTech["FinTech Projects"]
+        CA["chrono-arbitrage"]
+        RTB["rtb-arbitrage"]
+        BC["bonding-curve"]
+        PP["real-time-payment-fraud"]
+        MPO["merchant-profit-os"]
+        PGE["portfolio-growth-engine"]
+    end
+
+    subgraph Infra["AI Infrastructure"]
+        HA["hyper-agent-os"]
+        SS["swarm-substrate"]
+        AIK["agent-immune-kernel"]
+        ATF["agent-trust-fabric"]
+    end
+
+    subgraph Cloud["Cloud & Security"]
+        ACC["ai-cloud-cost-optimization"]
+        KF["kubernetes-ai-finops"]
+        AS["agentproof-ai-security"]
+        VT["vuln-triage"]
+    end
+
+    Free --> Pro --> Ent --> Custom
+    Pro --> Core
+    Ent --> Core
+    Custom --> Core
+    Core --> Ecosystem
+    Ecosystem --> FinTech
+    Ecosystem --> Infra
+    Ecosystem --> Cloud
+```
+
+### Go-to-Market Motion
+
+| Component | Details |
+|-----------|---------|
+| **Squads** | 12 specialized teams |
+| **Agent Slots** | 330 parallel agents |
+| **Channel** | Broker distribution |
+| **Domain** | a2zsoc.com |
+| **Revenue Target** | ~$30K MRR |
+
+### Standalone Mermaid Diagrams
+
+Open these in any browser for interactive dark-themed visualizations:
+
+| Diagram | File | Description |
+|---------|------|-------------|
+| **Ecosystem Overview** | [docs/mermaid/ecosystem-overview.html](docs/mermaid/ecosystem-overview.html) | Full Apex ecosystem — 9 clusters, 120+ projects |
+| **Commercial Layer** | [docs/mermaid/commercial-layer.html](docs/mermaid/commercial-layer.html) | 4-tier offering, GTM motion, revenue model |
+| **Apex Platform** | [docs/mermaid/apex-platform.html](docs/mermaid/apex-platform.html) | Unified platform architecture — 7 layers |
+
+### FinTech C2 Matrix
+
+| Layer | Capability | Projects |
+|-------|-----------|----------|
+| **Market Data** | Feed handlers, SBE/ITCH/Pillar decoders | Apex_ULL, real-time-ai-data-platform |
+| **Order Management** | Order books, matching engines | Apex_ULL |
+| **Risk Management** | Pre-trade risk, kill switches, circuit breakers | Apex_ULL, apex_infrastructure_killswitch_kernel |
+| **Compliance** | MiFID II, RTS 6/27/28, EMIR, CAT | Apex_ULL, GRC_Claw |
+| **Network Infrastructure** | DPDK, RDMA, AF_XDP, FPGA | Apex_ULL |
+| **Payments** | Real-time fraud detection | real-time-payment-fraud-platform |
+| **Revenue Assurance** | Order-to-cash, revenue optimization | autonomous-order-to-cash-revenue-assurance |
+| **Growth Analytics** | Marketing incrementality, churn, portfolio | growth-decision-engine, churn-inversion |
+| **Arbitrage** | Chronological arbitrage, RTB arbitrage | chrono-arbitrage, rtb-arbitrage |
+| **DeFi** | Bonding curves | bonding-curve |
+| **Merchant** | Merchant profit optimization | merchant-profit-os |
+| **AI Infrastructure** | Multi-agent swarms, orchestration | ApexGraphSwarm, GRC_Claw |
+| **Cloud Infrastructure** | Multi-cloud FinOps, cost optimization | ai-cloud-cost-optimization-platform |
+| **Security** | Zero trust, identity, SBOM | agentproof-ai-security-scanner |
+| **Observability** | AIOps, distributed tracing | aiops-observability-platform |
+| **Neuromorphic** | BCI, neuromorphic computing | neuro-manifold, neuro-spatial |
+| **Post-Quantum** | PQC, ZK proofs | pqc-enclave, zk-biometrics |
+| **Physical AI** | Embodied AI, robotics | cyborg-bench, sky-sentinel |
+| **Edge AI** | Edge vision, edge NPU | edge-vision-mesh |
+
+---
+
+## 10. License
+
+**GNU Affero General Public License v3.0 (AGPL-3.0)**
+
+Copyright (C) 2026 Ahmed Hassan
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+The full license text is in the [LICENSE](LICENSE) file.
+
+**Key AGPL-3.0 provisions:**
+- Source code must be provided to users who interact with the software over a network
+- Modifications must be released under the same license
+- Patent grant included
+- Compatible with GPL-3.0
 
 ---
 

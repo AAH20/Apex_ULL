@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex Platform — Unified Architecture</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --fg: #c9d1d9;
+    --border: #30363d;
+    --accent: #58a6ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: #f0f6fc;
+  }
+  .subtitle {
+    font-size: 0.9rem;
+    color: #8b949e;
+    margin-bottom: 1.5rem;
+  }
+  .mermaid {
+    background: #161b22;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 1200px;
+    width: 100%;
+    overflow-x: auto;
+  }
+  .mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+  /* Mermaid dark-theme overrides */
+  .mermaid .node rect,
+  .mermaid .node polygon,
+  .mermaid .node circle {
+    stroke-width: 2px;
+  }
+  .mermaid .cluster rect {
+    rx: 8;
+    ry: 8;
+  }
+  .mermaid .edgePath path {
+    stroke: #58a6ff;
+    stroke-width: 1.5px;
+  }
+  .mermaid .edgeLabel {
+    background-color: #161b22;
+    color: #c9d1d9;
+  }
+  .mermaid .cluster-label {
+    color: #f0f6fc;
+    font-weight: 600;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    max-width: 1200px;
+    justify-content: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: #8b949e;
+  }
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+  }
+  footer {
+    margin-top: 2rem;
+    font-size: 0.75rem;
+    color: #484f58;
+  }
+</style>
+</head>
+<body>
+
+<h1>Apex Platform — Unified Architecture</h1>
+<p class="subtitle">Apex_ULL · ApexGraphSwarm · GRC_Claw · Data Center Commander · Apex Memory Context · Commercial Layer · Integration APIs</p>
+
+<div class="mermaid">
+flowchart TD
+    %% ── Layer 1: Ultra-Low-Latency Infrastructure ──
+    subgraph ULL["🔧 Apex_ULL — Ultra-Low-Latency Infrastructure"]
+        U1["C++20 / Rust Core"]
+        U2["Python Bindings"]
+    end
+
+    %% ── Layer 2: Graph Intelligence ──
+    subgraph AGS["🧠 ApexGraphSwarm — Graph Intelligence + Multi-Agent Orchestration"]
+        A1["Graph Engine"]
+        A2["12 Squads · 330 Slots"]
+    end
+
+    %% ── Layer 3: Governance ──
+    subgraph GRC["🛡️ GRC_Claw — ISO 42001 Governance Chassis"]
+        G1["Risk Engine"]
+        G2["Compliance Monitor"]
+    end
+
+    %% ── Layer 4: DC Lifecycle ──
+    subgraph DCC["🏢 Data Center Commander — DC Lifecycle"]
+        D1["Provisioning"]
+        D2["Monitoring"]
+    end
+
+    %% ── Layer 5: Memory ──
+    subgraph AMC["💾 Apex Memory Context"]
+        M1["Cognee + Hindsight"]
+        M2["Nerve + Laya"]
+    end
+
+    %% ── Layer 6: Commercial ──
+    subgraph COM["💰 Commercial Layer"]
+        C1["Free / Pro"]
+        C2["Enterprise / Custom"]
+    end
+
+    %% ── Layer 7: APIs ──
+    subgraph API["🔌 Integration APIs"]
+        P1["REST · GraphQL · WebSocket"]
+    end
+
+    %% ── Inter-layer connections ──
+    ULL --> AGS
+    AGS --> GRC
+    GRC --> DCC
+    DCC --> AMC
+    COM --> ULL
+    COM --> AGS
+    API --> ULL
+    API --> AGS
+    API --> GRC
+
+    %% ── Styling ──
+    classDef ull fill:#1f6feb,stroke:#388bfd,color:#ffffff
+    classDef ags fill:#8957e5,stroke:#a371f7,color:#ffffff
+    classDef grc fill:#238636,stroke:#2ea043,color:#ffffff
+    classDef dcc fill:#9e6a03,stroke:#d29922,color:#ffffff
+    classDef amc fill:#bf3989,stroke:#db61a2,color:#ffffff
+    classDef com fill:#da3633,stroke:#f85149,color:#ffffff
+    classDef api fill:#0e7490,stroke:#22d3ee,color:#ffffff
+
+    class U1,U2 ull
+    class A1,A2 ags
+    class G1,G2 grc
+    class D1,D2 dcc
+    class M1,M2 amc
+    class C1,C2 com
+    class P1 api
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#1f6feb"></div> Apex_ULL</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#8957e5"></div> ApexGraphSwarm</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#238636"></div> GRC_Claw</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#9e6a03"></div> Data Center Commander</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#bf3989"></div> Apex Memory Context</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#da3633"></div> Commercial Layer</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#0e7490"></div> Integration APIs</div>
+</div>
+
+<footer>Domain: a2zsoc.com · Generated for Apex Platform</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    flowchart: {
+      useMaxWidth: false,
+      htmlLabels: true,
+      curve: 'basis'
+    },
+    themeVariables: {
+      darkMode: true,
+      background: '#161b22',
+      primaryColor: '#1f6feb',
+      primaryTextColor: '#ffffff',
+      primaryBorderColor: '#388bfd',
+      lineColor: '#58a6ff',
+      secondaryColor: '#21262d',
+      tertiaryColor: '#161b22',
+      clusterBkg: '#21262d',
+      clusterBorder: '#30363d',
+      titleColor: '#f0f6fc',
+      edgeLabelBackground: '#161b22'
+    }
+  });
+</script>
+
+</body>
+</html>
